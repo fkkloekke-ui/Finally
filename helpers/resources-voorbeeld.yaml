@@ -1,0 +1,14 @@
+# Toe te voegen bij: Instellingen → Dashboards → rechtsboven (⋮) → Resources
+# (of in configuration.yaml onder lovelace: resources, als je in YAML-modus werkt)
+#
+# Plaats eerst de drie .js-bestanden in: /config/www/finally-card/
+# Daarna deze drie resources toevoegen — de "?v=1" is cache-busting, ophogen
+# (?v=2, ?v=3, ...) na elke update van een bestand, anders houdt de browser
+# een oude versie in cache vast.
+
+- url: /local/finally-card/finally-wizard-customer.js?v=1
+  type: module
+- url: /local/finally-card/finally-skycard-customer.js?v=1
+  type: module
+- url: /local/finally-card/finally-skycard-mobile-customer.js?v=1
+  type: module

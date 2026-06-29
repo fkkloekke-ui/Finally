@@ -1,0 +1,44 @@
+# ============================================================
+# Finally Card — Walstroom Helpers
+# Importeren via: Instellingen → Helpers → Importeren
+# Of handmatig toevoegen aan configuration.yaml onder de juiste sectie
+# ============================================================
+
+input_number:
+  walstroom_soc_aan:
+    name: Walstroom SOC aan-drempel
+    min: 10
+    max: 80
+    step: 5
+    initial: 30
+    unit_of_measurement: "%"
+    icon: mdi:battery-low
+
+  walstroom_soc_uit:
+    name: Walstroom SOC uit-drempel
+    min: 40
+    max: 90
+    step: 5
+    initial: 50
+    unit_of_measurement: "%"
+    icon: mdi:battery-high
+
+  walstroom_zon_drempel:
+    name: Walstroom zon-drempel
+    min: 0
+    max: 1000
+    step: 50
+    initial: 300
+    unit_of_measurement: "W"
+    icon: mdi:white-balance-sunny
+
+input_boolean:
+  walstroom_override:
+    name: Walstroom handmatige override
+    icon: mdi:hand-back-right
+
+input_datetime:
+  walstroom_laatste_zon_uit:
+    name: Walstroom laatste keer uit door zon
+    has_date: true
+    has_time: true

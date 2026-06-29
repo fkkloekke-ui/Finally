@@ -1,0 +1,133 @@
+# ============================================================
+# Finally Card — Walstroom Automations
+# Importeren via: Instellingen → Automatiseringen → drie puntjes → Importeren
+# BELANGRIJK: pas de entity_id's aan naar de namen van deze installatie:
+#   - sensor.smartshunt_XXXXX_batterij        (SOC van de accubank)
+#   - sensor.gx_device_pv_power               (zonproductie)
+#   - switch.walstroom_socket_1               (de Shelly/walstroom schakelaar)
+#   - sensor.<quattro>_input_voltage_l1        (walstroom spanning, voor alarm)
+#   - notify.mobile_app_<jouw_telefoon>        (voor meldingen, optioneel)
+# ============================================================
+
+- id: walstroom_soc_laag_aan
+  alias: Walstroom — Inschakelen bij lage SOC
+  description: Schakel walstroom socket aan als accu SOC te laag is, met anti-klapper bescherming
+  triggers:
+    - entity_id: sensor.smartshunt_XXXXX_batterij
+      below: input_number.walstroom_soc_aan
+      for:
+        minutes: 2
+      trigger: numeric_state
+  conditions:
+    - condition: state
+      entity_id: input_boolean.walstroom_override
+      state: "off"
+    - condition: state
+      entity_id: switch.walstroom_socket_1
+      state: "off"
+    - condition: template
+      value_template: >-
+        {{ (now() - states('input_datetime.walstroom_laatste_zon_uit')
+        | as_datetime | as_local).total_seconds() > 1800
+        or states('input_datetime.walstroom_laatste_zon_uit') in ['unknown','unavailable',''] }}
+  actions:
+    - target:
+        entity_id: switch.walstroom_socket_1
+      action: switch.turn_on
+  mode: single
+
+- id: walstroom_soc_vol_uit
+  alias: Walstroom — Uitschakelen bij volle accu
+  description: Schakel walstroom socket uit als de accu vol is
+  triggers:
+    - entity_id: sensor.smartshunt_XXXXX_batterij
+      above: input_number.walstroom_soc_uit
+      for:
+        minutes: 5
+      trigger: numeric_state
+  conditions:
+    - condition: state
+      entity_id: input_boolean.walstroom_override
+      state: "off"
+    - condition: state
+      entity_id: switch.walstroom_socket_1
+      state: "on"
+  actions:
+    - target:
+        entity_id: switch.walstroom_socket_1
+      action: switch.turn_off
+  mode: single
+
+- id: walstroom_zon_uit
+  alias: Walstroom — Uitschakelen bij voldoende zon
+  description: Schakel walstroom socket uit als zon genoeg produceert, sla timestamp op voor anti-klapper
+  triggers:
+    - entity_id: sensor.gx_device_pv_power
+      above: input_number.walstroom_zon_drempel
+      for:
+        minutes: 10
+      trigger: numeric_state
+  conditions:
+    - condition: state
+      entity_id: input_boolean.walstroom_override
+      state: "off"
+    - condition: state
+      entity_id: switch.walstroom_socket_1
+      state: "on"
+    - condition: numeric_state
+      entity_id: sensor.smartshunt_XXXXX_batterij
+      above: input_number.walstroom_soc_aan
+  actions:
+    - target:
+        entity_id: switch.walstroom_socket_1
+      action: switch.turn_off
+    - action: input_datetime.set_datetime
+      target:
+        entity_id: input_datetime.walstroom_laatste_zon_uit
+      data:
+        datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+  mode: single
+
+- id: walstroom_overbelasting_aan
+  alias: Walstroom — Inschakelen bij overbelasting
+  description: Schakel walstroom socket aan bij hoge load, ongeacht override (veiligheid)
+  triggers:
+    - entity_id: sensor.gx_device_consumption_power_l1
+      above: 4500
+      for:
+        seconds: 30
+      trigger: numeric_state
+  conditions:
+    - condition: state
+      entity_id: switch.walstroom_socket_1
+      state: "off"
+  actions:
+    - target:
+        entity_id: switch.walstroom_socket_1
+      action: switch.turn_on
+  mode: single
+
+- id: walstroom_overbelasting_uit
+  alias: Walstroom — Uitschakelen na overbelasting
+  description: Schakel walstroom socket weer uit als load voldoende gedaald is en SOC toereikend is
+  triggers:
+    - entity_id: sensor.gx_device_consumption_power_l1
+      below: 2500
+      for:
+        minutes: 10
+      trigger: numeric_state
+  conditions:
+    - condition: state
+      entity_id: input_boolean.walstroom_override
+      state: "off"
+    - condition: state
+      entity_id: switch.walstroom_socket_1
+      state: "on"
+    - condition: numeric_state
+      entity_id: sensor.smartshunt_XXXXX_batterij
+      above: 35
+  actions:
+    - target:
+        entity_id: switch.walstroom_socket_1
+      action: switch.turn_off
+  mode: single

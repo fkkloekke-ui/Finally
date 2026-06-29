@@ -1,0 +1,22 @@
+title: Finally Card
+views:
+  - title: Installatie
+    path: finally-wizard
+    icon: mdi:auto-fix
+    type: panel
+    cards:
+      - type: custom:finally-wizard-customer
+
+  - title: SkyCard
+    path: finally-skycard
+    icon: mdi:ferry
+    type: panel
+    cards:
+      - type: custom:finally-skycard-customer
+
+  - title: Mobiel
+    path: finally-mobiel
+    icon: mdi:cellphone
+    type: panel
+    cards:
+      - type: custom:finally-skycard-mobile-customer

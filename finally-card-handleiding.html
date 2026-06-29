@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<title>Finally Card — Installatiehandleiding</title>
+<style>
+  body { font-family: Arial, sans-serif; font-size: 11pt; color: #222; max-width: 800px; margin: 40px auto; padding: 0 20px; line-height: 1.6; }
+  h1 { color: #003366; border-bottom: 2px solid #003366; padding-bottom: 6px; margin-top: 40px; }
+  h2 { color: #005588; margin-top: 24px; }
+  h3 { color: #0077aa; margin-top: 16px; }
+  .title-page { text-align: center; padding: 60px 0 40px; border-bottom: 3px solid #003366; margin-bottom: 40px; }
+  .title-page h1 { font-size: 32pt; border: none; color: #003366; }
+  .title-page .sub { font-size: 16pt; color: #0077aa; margin: 10px 0; }
+  .title-page .desc { font-style: italic; color: #555; }
+  .title-page .version { color: #888; font-size: 10pt; margin-top: 20px; }
+  .note { background: #e8f4fd; border-left: 4px solid #0077aa; padding: 10px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; font-style: italic; }
+  .warning { background: #fff3e0; border-left: 4px solid #ff8800; padding: 10px 16px; margin: 16px 0; border-radius: 0 6px 6px 0; }
+  code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-family: 'Courier New', monospace; font-size: 10pt; color: #006600; }
+  pre { background: #f5f5f5; border-left: 4px solid #00aa44; padding: 12px 16px; margin: 10px 0 10px 20px; font-family: 'Courier New', monospace; font-size: 10pt; color: #006600; border-radius: 0 6px 6px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+  th { background: #003366; color: white; padding: 8px 12px; text-align: left; }
+  td { border: 1px solid #ccc; padding: 7px 12px; }
+  tr:nth-child(even) { background: #f9f9f9; }
+  ol, ul { padding-left: 24px; }
+  li { margin: 4px 0; }
+  .toc a { color: #003366; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc li { margin: 6px 0; }
+  @media print {
+    .no-print { display: none; }
+    h1 { page-break-before: always; }
+    h1:first-of-type { page-break-before: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<div class="title-page">
+  <h1>FINALLY CARD</h1>
+  <div class="sub">Installatiehandleiding</div>
+  <div class="desc">Victron Energy + Home Assistant dashboard voor de scheepvaart</div>
+  <div class="version">Versie 1.1 &nbsp;•&nbsp; Juni 2026</div>
+</div>
+
+<h1 style="border:none;margin-top:0">Inhoudsopgave</h1>
+<ol class="toc">
+  <li><a href="#s1">Inleiding en systeemoverzicht</a></li>
+  <li><a href="#s2">Benodigde hardware</a></li>
+  <li><a href="#s3">Home Assistant installeren (HAOS)</a></li>
+  <li><a href="#s4">Victron integratie instellen</a></li>
+  <li><a href="#s5">Shelly schakelaar instellen</a></li>
+  <li><a href="#s6">Finally Card wizard installeren</a></li>
+  <li><a href="#s6b">Bootfoto voorbereiden</a></li>
+  <li><a href="#s7">Walstroom automatisering</a></li>
+  <li><a href="#s8">Helpers aanmaken</a></li>
+  <li><a href="#s9">Bekende beperkingen en openstaande punten</a></li>
+  <li><a href="#s10">Klantenregister</a></li>
+</ol>
+
+<h1 id="s1">1. Inleiding en systeemoverzicht</h1>
+<p>De Finally Card is een op maat gemaakt Home Assistant dashboard voor schepen met een Victron Energy systeem. Het bestaat uit drie componenten:</p>
+<ul>
+  <li><strong>finally-skycard.js</strong> — volledig scherm kiosk dashboard voor een vaste display (bijv. Dell in de stuurhut)</li>
+  <li><strong>finally-skycard-mobile.js</strong> — mobiel dashboard voor de HA app op telefoon of tablet</li>
+  <li><strong>finally-wizard.js</strong> — installatiewizard die het systeem automatisch configureert</li>
+</ul>
+<p>Het systeem monitort en beheert:</p>
+<ul>
+  <li>Accu SOC, spanning en stroom (via SmartShunt)</li>
+  <li>Zonne-energie productie (via SmartSolar MPPT)</li>
+  <li>Walstroom aansluiting (via Quattro/Multiplus + Shelly schakelaar)</li>
+  <li>JK BMS cel spanning bewaking</li>
+  <li>Klimaat, verlichting en systeem status</li>
+</ul>
+<div class="note">De Finally Card werkt uitsluitend met Victron apparatuur aangesloten op een Cerbo GX of Venus GX. Zonder GX apparaat is de integratie niet mogelijk.</div>
+
+<h1 id="s2">2. Benodigde hardware</h1>
+<h2>Minimale configuratie</h2>
+<ul>
+  <li>Mini-PC voor Home Assistant (bijv. HP EliteDesk 705 G3 USFF, Beelink Mini S12 Pro, of vergelijkbaar)</li>
+  <li>Minimaal 4GB RAM, 32GB opslag (SSD aanbevolen)</li>
+  <li>Netwerkkabel of WiFi op hetzelfde netwerk als de Cerbo GX</li>
+  <li>Shelly Plug S of Shelly Plus Plug S voor walstroom schakelaar</li>
+</ul>
+<h2>Aanbevolen hardware per budget</h2>
+<table>
+  <tr><th>Optie</th><th>Hardware</th><th>Prijs</th></tr>
+  <tr><td>Budget</td><td>Raspberry Pi 4 (4GB) + SSD via USB</td><td>±€100</td></tr>
+  <tr><td>Aanbevolen</td><td>HP EliteDesk 705 G3 USFF (refurb)</td><td>±€99</td></tr>
+  <tr><td>Compact</td><td>Beelink Mini S12 Pro (N100, passief gekoeld)</td><td>±€150</td></tr>
+</table>
+<div class="warning">De Cerbo GX en de HA machine moeten op hetzelfde lokale netwerk zitten. Controleer dit voor de installatie.</div>
+
+<h1 id="s3">3. Home Assistant installeren (HAOS)</h1>
+<h2>Voorbereiding</h2>
+<ol>
+  <li>Download Balena Etcher: <code>https://etcher.balena.io</code></li>
+  <li>Download het HAOS image voor x86-64:<br><code>https://github.com/home-assistant/operating-system/releases</code></li>
+  <li>Kies: <code>haos_generic-x86-64-[versie].img.xz</code></li>
+  <li>Schrijf het image naar een USB stick (minimaal 8GB) met Balena Etcher</li>
+</ol>
+<h2>BIOS instellen</h2>
+<ol>
+  <li>Start de mini-PC op en druk op F2 / Del / F10 om in de BIOS te komen (verschilt per merk)</li>
+  <li>Zet <strong>UEFI boot mode AAN</strong></li>
+  <li>Zet <strong>Secure Boot UIT</strong></li>
+  <li>Zet USB als eerste boot optie</li>
+  <li>Sla op en herstart</li>
+</ol>
+<div class="note">HP EliteDesk tip: druk F10 voor BIOS setup. UEFI staat standaard aan. Secure Boot staat onder Security.</div>
+<h2>Installatie</h2>
+<ol>
+  <li>Steek de USB stick in de mini-PC</li>
+  <li>HAOS installeert zichzelf automatisch op de interne SSD — dit duurt 5-10 minuten</li>
+  <li>Wacht tot het scherm "Use browser to configure" toont</li>
+  <li>Ga op een andere PC/tablet naar <code>http://homeassistant.local:8123</code> of het IP adres dat je in de router ziet</li>
+  <li>Volg de onboarding wizard en maak een admin account aan</li>
+  <li>Wachtwoord: gebruik een uniek wachtwoord per installatie, bijv. <code>Finally-[bootnaam]-[jaar]</code></li>
+</ol>
+<div class="warning">Bewaar het wachtwoord per klant in een wachtwoordmanager. Gebruik nooit hetzelfde wachtwoord voor meerdere installaties.</div>
+
+<h1 id="s4">4. Victron integratie instellen</h1>
+<ol>
+  <li>Ga in HA naar <strong>Instellingen → Apparaten & Diensten</strong></li>
+  <li>Klik op <strong>+ Integratie toevoegen</strong></li>
+  <li>Zoek op "Victron GX" en selecteer de integratie</li>
+  <li>HA detecteert de Cerbo GX automatisch als deze op hetzelfde netwerk zit</li>
+  <li>Selecteer de gevonden Cerbo en klik <strong>Voltooien</strong></li>
+</ol>
+<div class="note">Als de Cerbo niet automatisch gevonden wordt: controleer of "MQTT on LAN" aan staat via de Remote Console → Services.</div>
+<h2>Apparaten na integratie</h2>
+<ul>
+  <li>GX Device</li>
+  <li>SmartShunt (accubewaking)</li>
+  <li>Quattro of Multiplus (omvormer/lader)</li>
+  <li>SmartSolar MPPT (zonnelader)</li>
+  <li>Generator start/stop (indien aanwezig)</li>
+</ul>
+
+<h1 id="s5">5. Shelly schakelaar instellen</h1>
+<ol>
+  <li>Verbind de Shelly met het WiFi netwerk via de Shelly app</li>
+  <li>Zorg dat de Shelly op hetzelfde netwerk zit als de HA machine</li>
+  <li>Ga in HA naar <strong>Instellingen → Apparaten & Diensten</strong></li>
+  <li>De Shelly integratie wordt automatisch gevonden — klik <strong>Configureren</strong></li>
+  <li>Noteer de entity ID van de schakelaar (bijv. <code>switch.shellyplus1_78ee4cc39480</code>)</li>
+</ol>
+<div class="warning">Gebruik een Shelly Plug S of Shelly Plus Plug S. Andere merken (bijv. Calex, TP-Link) werken mogelijk alleen via cloud en zijn niet betrouwbaar voor automatisering.</div>
+
+<h1 id="s6">6. Finally Card wizard installeren</h1>
+<div class="warning">Gebruik bij klantinstallaties altijd de <code>-customer</code> bestanden (bijv. <code>finally-wizard-customer.js</code>), nooit de bestanden zonder die toevoeging. Die laatste zijn alleen voor de eigen MS Finally installatie en bevatten boot-specifieke elementen.</div>
+<h2>Bestanden uploaden via Samba</h2>
+<ol>
+  <li>Installeer de Samba Share addon:<br><strong>Instellingen → Add-ons → Add-on store → zoek "Samba share" → Installeren → Starten</strong></li>
+  <li>Open Windows Verkenner en ga naar: <code>\\[IP-adres]\config</code></li>
+  <li>Maak een map <code>www</code> aan als die nog niet bestaat</li>
+  <li>Kopieer de volgende bestanden naar de www map:
+    <ul>
+      <li><code>finally-wizard-customer.js</code></li>
+      <li><code>finally-skycard-mobile-customer.js</code></li>
+      <li><code>finally-skycard-customer.js</code> (alleen bij kiosk installatie met vast scherm)</li>
+    </ul>
+  </li>
+  <li>Maak een map <code>www/finally-card/</code> aan en kopieer hierin:
+    <ul>
+      <li>Alle 13 weerachtergronden (<code>clear-day.png</code>, <code>cloudy-night.png</code>, etc.)</li>
+      <li>De voorbewerkte <code>boot.png</code> van de klant (zie sectie 6b)</li>
+    </ul>
+  </li>
+  <li>Herstart HA: <strong>Instellingen → Systeem → Herstarten</strong></li>
+</ol>
+<h2>Resource toevoegen in HA</h2>
+<ol>
+  <li>Ga naar <strong>Instellingen → Dashboards → drie puntjes (⋮) → Resources</strong></li>
+  <li>Klik <strong>+</strong> en voeg toe:</li>
+</ol>
+<pre>/local/finally-wizard-customer.js          →  JavaScript module
+/local/finally-skycard-mobile-customer.js  →  JavaScript module
+/local/finally-skycard-customer.js         →  JavaScript module (kiosk)</pre>
+<h2>Wizard dashboard aanmaken</h2>
+<ol>
+  <li>Ga naar <strong>Instellingen → Dashboards → + Dashboard toevoegen</strong></li>
+  <li>Geef het de naam "wizard"</li>
+  <li>Open het dashboard → bewerk (potlood rechts boven) → + Card toevoegen → Handmatig</li>
+  <li>Voer in:</li>
+</ol>
+<pre>type: custom:finally-wizard-customer</pre>
+<ol start="5">
+  <li>Sla op — de wizard verschijnt nu in het dashboard</li>
+</ol>
+<h2>Activatiecode</h2>
+<p>De wizard vraagt bij eerste gebruik om een licentiecode. Deze genereer je via de codegenerator (<code>finally-codegenerator.html</code>) of vraag deze op bij Erik. Formaat: <code>FC-[jaar]-[naam]-[checksum]</code>, bijv. <code>FC-2026-TWIN-8511</code>.</p>
+<h2>Wizard doorlopen</h2>
+<ol>
+  <li>Stap 0: Activatiecode invoeren</li>
+  <li>Stap 1: Voer de naam van het schip in</li>
+  <li>Stap 2: Selecteer welke apparatuur aanwezig is</li>
+  <li>Stap 3: Serienummers worden automatisch gedetecteerd uit HA — vul handmatig in waar nodig</li>
+  <li>Stap 4: Upload een foto van het schip</li>
+  <li>Stap 5: Overzicht en opslaan</li>
+</ol>
+<div class="note">De wizard detecteert automatisch de Victron serienummers. Controleer altijd of SmartShunt en MPPT gevonden zijn — zo niet, zie sectie 9.</div>
+<h2>Mobile en kiosk dashboard aanmaken</h2>
+<ol>
+  <li>Maak een nieuw dashboard aan met naam "finally" voor mobiel gebruik</li>
+  <li>Voeg een card toe via Handmatig:</li>
+</ol>
+<pre>type: custom:finally-skycard-mobile-customer</pre>
+<ol start="3">
+  <li>Maak voor een vast scherm (kiosk) een tweede dashboard aan met naam "kiosk"</li>
+  <li>Voeg een card toe via Handmatig:</li>
+</ol>
+<pre>type: custom:finally-skycard-customer</pre>
+<div class="note">De kiosk card schaalt automatisch naar elke schermresolutie — het ontwerp is gemaakt op basis van 1920×1080 maar past zich aan op kleinere of grotere schermen zonder vervorming.</div>
+
+<h1 id="s6b">6b. Bootfoto voorbereiden</h1>
+<p>De boot van de klant wordt als losse PNG-laag over de weerachtergrond geplaatst. Voor het beste resultaat:</p>
+<ul>
+  <li><strong>Liggend formaat</strong> — de boot breed in beeld (verhouding minimaal 1.3:1), geen portretfoto</li>
+  <li><strong>Zijaanzicht</strong> van de boot, goed belicht, het hele schip in beeld</li>
+  <li><strong>Transparante achtergrond</strong> — geen lucht of water, alleen de boot zelf</li>
+  <li><strong>Geen lege ruimte</strong> rondom de boot — strak bijgesneden tot de rand</li>
+  <li><strong>Resolutie</strong>: 1500×800 tot 2000×1000 pixels is ruim voldoende</li>
+</ul>
+<div class="warning">Een portretfoto (hoger dan breed) geeft visuele problemen: de boot lijkt te zweven of valt grotendeels buiten beeld op kleinere schermen. Vraag de klant altijd om een liggende foto.</div>
+<h2>Werkwijze</h2>
+<ol>
+  <li>Vraag de klant om een foto van hun boot (zijaanzicht, het schip vult het grootste deel van het beeld)</li>
+  <li>Verwijder de achtergrond met een AI-tool (bijv. ChatGPT, Remove.bg) zodat er een effen zwarte of witte achtergrond overblijft</li>
+  <li>Gebruik het meegeleverde script <code>boot_voorbewerken.py</code> om de achtergrond automatisch transparant te maken en bij te snijden:</li>
+</ol>
+<pre>pip install Pillow numpy
+python3 boot_voorbewerken.py invoer.png boot.png</pre>
+<ol start="4">
+  <li>Het script waarschuwt automatisch als de verhouding niet ideaal is (te hoog/smal)</li>
+  <li>Kopieer het resultaat als <code>boot.png</code> naar <code>www/finally-card/</code> op de installatie</li>
+</ol>
+
+
+<h1 id="s7">7. Walstroom automatisering</h1>
+<p>Er zijn 5 automations die samen het walstroom systeem beheren:</p>
+<table>
+  <tr><th>Automation</th><th>Trigger</th><th>Actie</th></tr>
+  <tr><td>SOC laag inschakelen</td><td>SOC &lt; drempel voor 2 min</td><td>Socket aan (met 30 min anti-klapper)</td></tr>
+  <tr><td>SOC hoog uitschakelen</td><td>SOC &gt; drempel voor 5 min</td><td>Socket uit</td></tr>
+  <tr><td>Zon uitschakelen</td><td>Zon &gt; drempel voor 10 min</td><td>Socket uit + timestamp opslaan</td></tr>
+  <tr><td>Overbelasting inschakelen</td><td>Load &gt; 4500W voor 30 sec</td><td>Socket aan (altijd, ook bij override)</td></tr>
+  <tr><td>Overbelasting uitschakelen</td><td>Load &lt; 2500W voor 10 min + SOC &gt; 35%</td><td>Socket uit</td></tr>
+</table>
+<p>Drempelwaarden zijn instelbaar via het dashboard (⚙ Instellingen in de walstroom tegel):</p>
+<table>
+  <tr><th>Helper</th><th>Standaard</th><th>Bereik</th></tr>
+  <tr><td><code>walstroom_soc_aan</code></td><td>30%</td><td>min 10, max 70, stap 5</td></tr>
+  <tr><td><code>walstroom_soc_uit</code></td><td>80%</td><td>min 50, max 100, stap 5</td></tr>
+  <tr><td><code>walstroom_zon_drempel</code></td><td>300W</td><td>min 0, max 1000, stap 50</td></tr>
+</table>
+<div class="note">De automations zijn beschikbaar als YAML bestanden. Importeer via Instellingen → Automations → drie puntjes → Bewerken als YAML.</div>
+
+<h1 id="s8">8. Helpers aanmaken</h1>
+<p>Maak aan via <strong>Instellingen → Helpers → + Toevoegen</strong>, of importeer in één keer het bestand <code>finally_walstroom_helpers.yaml</code>:</p>
+<table>
+  <tr><th>Naam</th><th>Type</th><th>Standaard</th><th>Bereik</th></tr>
+  <tr><td><code>walstroom_soc_aan</code></td><td>Getal (input_number)</td><td>30</td><td>min 10, max 70, stap 5</td></tr>
+  <tr><td><code>walstroom_soc_uit</code></td><td>Getal (input_number)</td><td>80</td><td>min 50, max 100, stap 5</td></tr>
+  <tr><td><code>walstroom_zon_drempel</code></td><td>Getal (input_number)</td><td>300</td><td>min 0, max 1000, stap 50</td></tr>
+  <tr><td><code>walstroom_override</code></td><td>Schakelaar (input_boolean)</td><td>Uit</td><td>—</td></tr>
+  <tr><td><code>walstroom_laatste_zon_uit</code></td><td>Datum/tijd (input_datetime)</td><td>—</td><td>Datum + tijd</td></tr>
+</table>
+<div class="note">De automations zelf staan in <code>finally_walstroom_automations.yaml</code>. Pas na importeren de entity ID's aan (gemarkeerd met <code>XXXXX</code>) naar de namen van deze specifieke installatie.</div>
+
+<h1 id="s9">9. Bekende beperkingen en openstaande punten</h1>
+<h2>Viewport schaling — opgelost</h2>
+<ul>
+  <li>De kiosk card schaalt nu automatisch naar elke schermresolutie via een CSS transform-schaling op een vaste 1920×1080 ontwerplaag. Getest en werkend op laptop schermen met afwijkende resolutie.</li>
+</ul>
+<h2>Wizard detectie</h2>
+<ul>
+  <li>SmartShunt wordt gezocht via entity ID eindigend op <code>_spanning</code> of <code>_state_of_charge</code>. Bij afwijkende namen: handmatige invoer in stap 3.</li>
+  <li>MPPT wordt gezocht via "smartsolar" met zowel <code>pv_power</code> (VE.Direct) als <code>pv_yield_power</code> (VE.Can). Bij afwijkende namen: handmatige invoer in stap 3.</li>
+  <li>Handmatige invoer als automatische detectie mislukt — is al geïmplementeerd in de wizard.</li>
+  <li>Weather entity (<code>weather.forecast_thuis</code> e.d.) wordt nog niet automatisch gedetecteerd — moet momenteel handmatig in de code aangepast worden per installatie.</li>
+</ul>
+
+</ul>
+<h2>Wizard UX</h2>
+<ul>
+  <li>Selectie in stap 2 (apparatuur) is slecht zichtbaar — kleurcontrast wordt verbeterd in volgende versie.</li>
+  <li>Foto upload: bij staande foto's of masten is het onderwerp soms niet zichtbaar (object-position fix volgt).</li>
+</ul>
+<h2>Nog te bouwen</h2>
+<ul>
+  <li>Automatische generatie van finally-skycard-mobile.js op basis van wizard configuratie</li>
+  <li>Remote beheer via Nabu Casa (aanbevolen: €7/maand, geen open poorten nodig)</li>
+  <li>Multi-bank BMS ondersteuning in wizard</li>
+  <li>Handmatige invoer serienummers als detectie mislukt</li>
+</ul>
+
+<h1 id="s10">10. Klantenregister</h1>
+<p>Zie ook de digitale codegenerator (<code>finally-codegenerator.html</code>) voor een doorzoekbaar register met export/import via CSV.</p>
+<table>
+  <tr><th>Bootnaam</th><th>Klant</th><th>HA IP</th><th>Licentiecode</th><th>Datum</th><th>Opmerkingen</th></tr>
+  <tr><td>MS Finally</td><td>Erik &amp; Annet</td><td>192.168.1.88</td><td>—</td><td>Referentie</td><td>Kiosk + mobiel, JK BMS, eigen installatie</td></tr>
+  <tr><td>Twin Dolphins</td><td></td><td>192.168.1.136</td><td>FC-2026-TWIN-8511</td><td>2026</td><td>Mobiel + kiosk, 5x JK BMS 4S 200A (1 nog onderweg), 2x Yanmar, Orion-Tr Smart (nog niet aangesloten)</td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+
+</body>
+</html>

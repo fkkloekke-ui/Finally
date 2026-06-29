@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finally Card — Codegenerator</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #050e1f; color: #fff; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+  .wrap { width: 100%; max-width: 480px; }
+  .logo { text-align: center; margin-bottom: 32px; }
+  .logo h1 { font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #00aaff; }
+  .logo p { font-size: 10px; letter-spacing: 2px; color: rgba(255,255,255,0.3); margin-top: 4px; }
+  .card { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 28px; margin-bottom: 16px; }
+  label { display: block; font-size: 9px; letter-spacing: 1.5px; color: rgba(255,255,255,0.4); margin-bottom: 6px; margin-top: 16px; }
+  label:first-of-type { margin-top: 0; }
+  input[type=text], select { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); border-radius: 8px; padding: 12px 14px; color: #fff; font-size: 14px; outline: none; }
+  input:focus, select:focus { border-color: rgba(0,170,255,0.5); }
+  select option { background: #0a1628; }
+  .btn { width: 100%; margin-top: 20px; padding: 14px; background: #00aaff; color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .btn:hover { background: #0099ee; }
+  .result { display: none; margin-top: 20px; background: rgba(0,204,102,0.1); border: 1px solid rgba(0,204,102,0.3); border-radius: 10px; padding: 20px; text-align: center; }
+  .result .code { font-size: 24px; font-weight: 800; font-family: monospace; letter-spacing: 3px; color: #00cc66; margin: 8px 0; }
+  .result .lbl { font-size: 10px; color: rgba(255,255,255,0.4); letter-spacing: 1px; }
+  .copy-btn { margin-top: 12px; padding: 8px 20px; background: rgba(0,204,102,0.15); border: 1px solid rgba(0,204,102,0.3); border-radius: 8px; color: #00cc66; font-size: 12px; cursor: pointer; font-weight: 600; }
+  .copy-btn:hover { background: rgba(0,204,102,0.25); }
+  .history { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 20px; }
+  .history-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .history h3 { font-size: 11px; letter-spacing: 2px; color: rgba(255,255,255,0.4); }
+  .export-row { display: flex; gap: 8px; }
+  .exp-btn { padding: 6px 12px; border-radius: 8px; font-size: 11px; font-weight: 600; cursor: pointer; border: none; }
+  .exp-csv { background: rgba(0,170,255,0.15); border: 1px solid rgba(0,170,255,0.3); color: #00aaff; }
+  .exp-csv:hover { background: rgba(0,170,255,0.25); }
+  .exp-clear { background: rgba(255,60,60,0.1); border: 1px solid rgba(255,60,60,0.2); color: rgba(255,100,100,0.8); }
+  .exp-clear:hover { background: rgba(255,60,60,0.2); }
+  .hist-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; gap: 8px; }
+  .hist-item:last-child { border-bottom: none; }
+  .hist-boot { color: rgba(255,255,255,0.6); }
+  .hist-code { font-family: monospace; color: #00aaff; font-weight: 600; }
+  .hist-datum { font-size: 10px; color: rgba(255,255,255,0.25); }
+  .empty { color: rgba(255,255,255,0.25); font-size: 12px; text-align: center; padding: 8px; }
+  .del-btn { background: none; border: none; color: rgba(255,60,60,0.4); cursor: pointer; font-size: 14px; padding: 2px 6px; flex-shrink: 0; }
+  .del-btn:hover { color: #ff4444; }
+  .import-area { margin-top: 12px; }
+  .import-area input[type=file] { display: none; }
+  .imp-btn { width: 100%; padding: 8px; background: rgba(255,255,255,0.04); border: 1px dashed rgba(255,255,255,0.15); border-radius: 8px; color: rgba(255,255,255,0.4); font-size: 11px; cursor: pointer; text-align: center; }
+  .imp-btn:hover { border-color: rgba(0,170,255,0.4); color: #00aaff; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="logo">
+    <svg width="40" height="40" viewBox="0 0 48 48" fill="none" style="display:block;margin:0 auto 8px">
+      <circle cx="24" cy="24" r="22" stroke="#00aaff" stroke-width="1.5" stroke-dasharray="4 2"/>
+      <path d="M8 30 Q24 10 40 30" stroke="#00aaff" stroke-width="2" fill="none"/>
+      <rect x="20" y="28" width="8" height="10" rx="1" fill="#00aaff" opacity="0.6"/>
+    </svg>
+    <h1>FINALLY CARD</h1>
+    <p>LICENTIE CODEGENERATOR</p>
+  </div>
+
+  <div class="card">
+    <label>NAAM VAN HET SCHIP (max 4 letters)</label>
+    <input type="text" id="inp-naam" placeholder="bijv. TWIN" maxlength="10" style="text-transform:uppercase">
+    <label>JAAR</label>
+    <select id="inp-jaar">
+      <option value="2026">2026</option>
+      <option value="2027">2027</option>
+      <option value="2028">2028</option>
+      <option value="2029">2029</option>
+      <option value="2030">2030</option>
+    </select>
+    <label>KLANT NAAM (optioneel)</label>
+    <input type="text" id="inp-klant" placeholder="bijv. Jan de Vries">
+    <button class="btn" onclick="genereer()">Genereer licentie code</button>
+    <div class="result" id="result">
+      <div class="lbl">LICENTIECODE</div>
+      <div class="code" id="code-output"></div>
+      <div class="lbl" id="code-info"></div>
+      <button class="copy-btn" onclick="kopieer()">📋 Kopiëren</button>
+    </div>
+  </div>
+
+  <div class="history" id="history-wrap">
+    <div class="history-header">
+      <h3>KLANTENREGISTER</h3>
+      <div class="export-row">
+        <button class="exp-btn exp-csv" onclick="exportCSV()">⬇ Exporteer</button>
+        <button class="exp-btn exp-csv" onclick="document.getElementById('imp-file').click()">⬆ Importeer</button>
+        <button class="exp-btn exp-clear" onclick="clearAll()">✕ Wis</button>
+      </div>
+    </div>
+    <input type="file" id="imp-file" accept=".csv" onchange="importCSV(event)">
+    <div id="history-list"><div class="empty">Nog geen codes gegenereerd</div></div>
+  </div>
+</div>
+
+<script>
+function djb2(s) {
+  let hash = 5381;
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) + hash) + s.charCodeAt(i);
+    hash = hash | 0;
+  }
+  return Math.abs(hash) % 9999;
+}
+
+function genereer() {
+  const naam = document.getElementById('inp-naam').value.trim().toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+  const jaar = document.getElementById('inp-jaar').value;
+  const klant = document.getElementById('inp-klant').value.trim();
+  if (naam.length < 2) { alert('Vul minimaal 2 letters in voor de naam'); return; }
+  const raw = `FC-${jaar}-${naam}-8472-FINALLY`;
+  const checksum = djb2(raw);
+  const code = `FC-${jaar}-${naam}-${String(checksum).padStart(4,'0')}`;
+  document.getElementById('code-output').textContent = code;
+  document.getElementById('code-info').textContent = naam + ' · ' + jaar + (klant ? ' · ' + klant : '');
+  document.getElementById('result').style.display = 'block';
+  slaOp(naam, jaar, code, klant);
+  toonHistory();
+}
+
+function kopieer() {
+  const code = document.getElementById('code-output').textContent;
+  navigator.clipboard.writeText(code).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✓ Gekopieerd!';
+    setTimeout(() => btn.textContent = '📋 Kopiëren', 2000);
+  });
+}
+
+function slaOp(naam, jaar, code, klant) {
+  const history = JSON.parse(localStorage.getItem('fc_codes') || '[]');
+  const datum = new Date().toLocaleDateString('nl-NL');
+  history.unshift({ naam, jaar, code, klant: klant || '', datum });
+  localStorage.setItem('fc_codes', JSON.stringify(history.slice(0, 200)));
+}
+
+function verwijder(idx) {
+  if (!confirm('Code verwijderen?')) return;
+  const history = JSON.parse(localStorage.getItem('fc_codes') || '[]');
+  history.splice(idx, 1);
+  localStorage.setItem('fc_codes', JSON.stringify(history));
+  toonHistory();
+}
+
+function clearAll() {
+  if (!confirm('Weet je zeker dat je het hele register wilt wissen?')) return;
+  localStorage.removeItem('fc_codes');
+  toonHistory();
+}
+
+function exportCSV() {
+  const history = JSON.parse(localStorage.getItem('fc_codes') || '[]');
+  if (history.length === 0) { alert('Geen codes om te exporteren'); return; }
+  let csv = 'Bootnaam,Jaar,Klant,Code,Datum\n';
+  history.forEach(h => {
+    csv += `${h.naam},${h.jaar},"${h.klant || ''}",${h.code},${h.datum}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `finally-card-klanten-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const lines = e.target.result.split('\n').slice(1); // skip header
+    const history = JSON.parse(localStorage.getItem('fc_codes') || '[]');
+    lines.forEach(line => {
+      const parts = line.split(',');
+      if (parts.length >= 4 && parts[0]) {
+        const entry = {
+          naam: parts[0].trim(),
+          jaar: parts[1].trim(),
+          klant: parts[2].replace(/"/g,'').trim(),
+          code: parts[3].trim(),
+          datum: parts[4] ? parts[4].trim() : ''
+        };
+        if (!history.find(h => h.code === entry.code)) {
+          history.push(entry);
+        }
+      }
+    });
+    localStorage.setItem('fc_codes', JSON.stringify(history));
+    toonHistory();
+    alert('Importeren gelukt!');
+  };
+  reader.readAsText(file);
+  event.target.value = '';
+}
+
+function toonHistory() {
+  const history = JSON.parse(localStorage.getItem('fc_codes') || '[]');
+  const list = document.getElementById('history-list');
+  if (history.length === 0) {
+    list.innerHTML = '<div class="empty">Nog geen codes gegenereerd</div>';
+    return;
+  }
+  list.innerHTML = history.map((h, i) => `
+    <div class="hist-item">
+      <div style="flex:1">
+        <div class="hist-boot">${h.naam} ${h.jaar}${h.klant ? ' · ' + h.klant : ''}</div>
+        <div class="hist-datum">${h.datum}</div>
+      </div>
+      <div class="hist-code">${h.code}</div>
+      <button class="del-btn" onclick="verwijder(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+document.getElementById('inp-naam').addEventListener('input', function() {
+  this.value = this.value.toUpperCase().replace(/[^A-Z]/g, '');
+});
+
+toonHistory();
+</script>
+</body>
+</html>
