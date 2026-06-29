@@ -11,21 +11,15 @@ Inclusief installatie-wizard, kiosk- en mobiele weergave.
 4. Zoek "Finally Card" in HACS en installeer
 5. Herstart Home Assistant
 
-Na installatie staan de bestanden in `/config/www/community/Finally/`:
-- `finally-wizard-customer.js`
-- `finally-skycard-customer.js`
-- `finally-skycard-mobile-customer.js`
+Na installatie staat het bestand in `/config/www/community/Finally/`:
+- `finally-skycard-customer.js` — bevat alle drie de custom elements (wizard, kiosk, mobiel) in één HACS-bundle
 
 ## Resources toevoegen
 
 Ga naar **Instellingen → Dashboards → ⋮ (rechtsboven) → Resources** en voeg toe:
 
 ```yaml
-- url: /hacsfiles/Finally/finally-wizard-customer.js
-  type: module
 - url: /hacsfiles/Finally/finally-skycard-customer.js
-  type: module
-- url: /hacsfiles/Finally/finally-skycard-mobile-customer.js
   type: module
 ```
 
