@@ -823,7 +823,7 @@ class FinallySkyCard extends HTMLElement {
 
     // Achtergrond
     const _skyRaw = hass ? (hass.states['sensor.sky_card_image']?.state ?? '--') : '--';
-    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/hacsfiles/Finally/clear-day.png';
+    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/local/finally-card/clear-day.png';
 
 
     // Flows actief
@@ -1844,7 +1844,7 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── Achtergrond ──
     const _skyRaw = st('sensor.sky_card_image');
-    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/hacsfiles/Finally/clear-day.png';
+    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/local/finally-card/clear-day.png';
 
 
     // ── Sparkline ──
