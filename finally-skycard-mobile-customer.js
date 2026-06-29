@@ -236,7 +236,7 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── Achtergrond ──
     const _skyRaw = st('sensor.sky_card_image');
-    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/hacsfiles/Finally/achtergrond13x/clear-day.png';
+    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/hacsfiles/Finally/clear-day.png';
 
 
     // ── Sparkline ──
