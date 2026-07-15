@@ -19,11 +19,26 @@ class FinallySkyCard extends HTMLElement {
     this._walLimitPopupOpen = false;
     this._walLimitVal = 16;
     this._walInstPopupOpen = false;
+
+    // Schaal het 1920x1080-ontwerp-canvas mee bij elke resize van het venster
+    this._resizeHandler = () => this._applyScale();
+    window.addEventListener('resize', this._resizeHandler);
+  }
+
+  _applyScale() {
+    const canvas = this.shadowRoot && this.shadowRoot.getElementById('design-canvas');
+    if (!canvas) return;
+    const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 
   setConfig(config) {
     this._config = config;
     this._render();
+  }
+
+  disconnectedCallback() {
+    if (this._resizeHandler) window.removeEventListener('resize', this._resizeHandler);
   }
 
   set hass(hass) {
@@ -851,6 +866,8 @@ class FinallySkyCard extends HTMLElement {
   }
   * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
   .wrap { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #050e1a; }
+  .design-canvas { position: absolute; top: 50%; left: 50%; width: 1920px; height: 1080px;
+    transform-origin: center center; will-change: transform; }
   .bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
   .ov-bot { position: absolute; bottom: 0; left: 0; right: 0; height: 44%; background: linear-gradient(transparent, rgba(0,4,18,0.88)); z-index: 2; pointer-events: none; }
   .ov-top { position: absolute; top: 0; left: 0; right: 0; height: 16%; background: linear-gradient(rgba(0,4,18,0.6), transparent); z-index: 2; pointer-events: none; }
@@ -919,6 +936,7 @@ class FinallySkyCard extends HTMLElement {
 </style>
 
 <div class="wrap">
+ <div class="design-canvas" id="design-canvas">
   <img class="bg" src="${skyImg}"/>
   <img src="/local/finally-card/boot.png" style="position:absolute;bottom:18%;left:35%;width:38%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
 
@@ -1357,7 +1375,11 @@ class FinallySkyCard extends HTMLElement {
 
 
   </div>
+ </div>
 </div>`;
+
+    // Pas de 1920x1080-canvas schaal toe op het huidige schermformaat
+    this._applyScale();
 
     // Start flow animatie
     this._startFlowAnim();
@@ -1552,13 +1574,13 @@ class FinallySkyCard extends HTMLElement {
     canvas.id = 'rain-canvas';
     canvas.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:6';
 
-    const wrap = this.shadowRoot.querySelector('.wrap');
+    const wrap = this.shadowRoot.querySelector('#design-canvas');
     if (!wrap) return;
     wrap.appendChild(canvas);
 
     const resize = () => {
-      canvas.width = wrap.offsetWidth || 1280;
-      canvas.height = wrap.offsetHeight || 800;
+      canvas.width = 1920;
+      canvas.height = 1080;
       canvas.style.width = canvas.width + 'px';
       canvas.style.height = canvas.height + 'px';
     };
