@@ -3224,24 +3224,26 @@ class FinallyWizard extends HTMLElement {
     const s = this._state;
     const devices = s.vrm.devices;
 
-    // Groepeer diagnostics-regels per apparaat-instance
-    const byInstance = {};
+    // Groepeer diagnostics-regels per apparaat: Device-type + instance (echte VRM-veldnamen)
+    const byDevice = {};
     devices.forEach(r => {
-      const inst = r.instance !== undefined ? r.instance : (r.Instance !== undefined ? r.Instance : 'x');
-      if (!byInstance[inst]) byInstance[inst] = [];
-      byInstance[inst].push(r);
+      const dev = r.Device || 'Onbekend';
+      const inst = r.instance !== undefined ? r.instance : 0;
+      const key = dev + '#' + inst;
+      if (!byDevice[key]) byDevice[key] = [];
+      byDevice[key].push(r);
     });
 
     const results = [];
-    const findVal = (rows, ...keywords) => {
-      const row = rows.find(r => keywords.some(k => (r.description||r.Description||'').toLowerCase().includes(k)));
-      return row ? (row.formattedValue || row.rawValue || row.value || '') : null;
+    const findVal = (rows, ...descriptions) => {
+      const row = rows.find(r => descriptions.some(d => (r.description || '').toLowerCase() === d.toLowerCase()));
+      return row ? (row.formattedValue ?? row.rawValue ?? '') : null;
     };
 
-    Object.entries(byInstance).forEach(([inst, rows]) => {
-      const productName = findVal(rows, 'product name', 'product id') || '';
-      const serial = findVal(rows, 'serial number') || ('instance-' + inst);
-      const pn = productName.toLowerCase();
+    Object.entries(byDevice).forEach(([key, rows]) => {
+      const productName = findVal(rows, 'MachineName') || rows[0]?.Device || '';
+      const serial = findVal(rows, 'Serial number', 'Serial Number', 'SerialNr') || ('instance-' + key);
+      const pn = String(productName).toLowerCase();
       if (pn.includes('quattro') || pn.includes('multiplus')) {
         s.serials.quattro = serial;
         results.push({ key:'quattro', found:true, name: productName || 'Quattro/MultiPlus', id: serial });
@@ -3259,9 +3261,12 @@ class FinallyWizard extends HTMLElement {
       }
     });
 
+    console.log('VRM apparaat-groepen gevonden (Device#instance → MachineName):',
+      Object.entries(byDevice).map(([key, rows]) => key + ' → ' + (findVal(rows, 'MachineName') || '(geen MachineName)')).join(' | '));
+
     if (results.length === 0) {
       list.innerHTML = '<div class="msg err">✗ Verbinding gelukt, maar geen herkenbare apparaten gevonden in de diagnostics-data. Mogelijk is het dataformaat van VRM anders dan verwacht — meld dit terug met de ruwe data (console).</div>';
-      console.log('VRM diagnostics raw data:', devices);
+      console.log('VRM diagnostics raw data (JSON, eerste 30):\n' + JSON.stringify(devices.slice(0, 30), null, 2));
       return;
     }
 
