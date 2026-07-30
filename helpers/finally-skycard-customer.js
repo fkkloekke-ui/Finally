@@ -3178,28 +3178,33 @@ class FinallyWizard extends HTMLElement {
       list.innerHTML = '<div class="msg err">✗ Vul zowel Portal-ID als Access Token in.</div>';
       return;
     }
-    list.innerHTML = '<div class="msg info"><span class="spinner"></span>Verbinden met VRM...</div>';
+    list.innerHTML = '<div class="msg info"><span class="spinner"></span>Verbinden met VRM (via Home Assistant)...</div>';
     try {
-      const instRes = await fetch('https://vrmapi.victronenergy.com/v2/users/me/installations', {
-        headers: { 'X-Authorization': 'Token ' + token }
-      });
-      if (!instRes.ok) throw new Error('VRM-login mislukt (HTTP ' + instRes.status + '). Klopt de token nog?');
-      const instData = await instRes.json();
+      if (!this._hass) throw new Error('Geen verbinding met Home Assistant beschikbaar.');
+
+      // Server-side call via rest_command — omzeilt browser-CORS omdat HA zelf de aanroep doet, niet de browser.
+      const instResult = await this._hass.callService('rest_command', 'vrm_installations', { token }, undefined, true, true);
+      const instStatus = instResult?.response?.status_code;
+      if (instStatus && instStatus >= 400) throw new Error('VRM-login mislukt (HTTP ' + instStatus + '). Klopt de token nog?');
+      const instContent = instResult?.response?.content;
+      if (!instContent) throw new Error('Geen antwoord ontvangen van de rest_command-service. Is "rest_command: vrm_installations" toegevoegd aan configuration.yaml en is HA herstart?');
+      const instData = JSON.parse(instContent);
       const records = instData.records || [];
       const inst = records.find(r => r.identifier === portalId) || records.find(r => String(r.idSite) === portalId);
-      if (!inst) throw new Error('Portal-ID "' + portalId + '" niet gevonden bij dit account. Gevonden installaties: ' + records.map(r=>r.identifier).join(', ') || '(geen)');
+      if (!inst) throw new Error('Portal-ID "' + portalId + '" niet gevonden bij dit account. Gevonden installaties: ' + (records.map(r=>r.identifier).join(', ') || '(geen)'));
       s.vrm.idSite = inst.idSite;
 
-      const diagRes = await fetch('https://vrmapi.victronenergy.com/v2/installations/' + inst.idSite + '/diagnostics', {
-        headers: { 'X-Authorization': 'Token ' + token }
-      });
-      if (!diagRes.ok) throw new Error('Kon apparaten niet ophalen (HTTP ' + diagRes.status + ')');
-      const diagData = await diagRes.json();
+      const diagResult = await this._hass.callService('rest_command', 'vrm_diagnostics', { token, id_site: inst.idSite }, undefined, true, true);
+      const diagStatus = diagResult?.response?.status_code;
+      if (diagStatus && diagStatus >= 400) throw new Error('Kon apparaten niet ophalen (HTTP ' + diagStatus + ')');
+      const diagContent = diagResult?.response?.content;
+      if (!diagContent) throw new Error('Geen antwoord ontvangen van de rest_command-service voor diagnostics.');
+      const diagData = JSON.parse(diagContent);
       s.vrm.devices = diagData.records || [];
       this._parseVrmDevices(list);
     } catch (err) {
-      const corsHint = (err instanceof TypeError) ? '<br><br><em>Dit lijkt op een CORS-blokkade door de browser (geen contact met de VRM-server kunnen maken). Meld dit terug — dan bouwen we een server-side omweg via Home Assistant zelf.</em>' : '';
-      list.innerHTML = '<div class="msg err">✗ ' + err.message + corsHint + '</div>';
+      list.innerHTML = '<div class="msg err">✗ ' + err.message + '</div>';
+      console.error('VRM fetch (server-side) fout:', err);
     }
   }
 
