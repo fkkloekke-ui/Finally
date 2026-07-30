@@ -2843,7 +2843,9 @@ class FinallyWizard extends HTMLElement {
       apparatuur: { cerbo: true, shunt: true, quattro: true, mppt: true, generator: false, tanks: false, shelly: false },
       serials: {},
       entities: {},
-      manualSerials: {}
+      manualSerials: {},
+      detectMode: 'lokaal',
+      vrm: { portalId: '', token: '', idSite: null, devices: [] }
     };
     this._activated = false;
   }
@@ -3099,7 +3101,7 @@ class FinallyWizard extends HTMLElement {
     this._step = n;
     this._updateSteps();
     this._renderStep();
-    if (n === 3) this._detectEntities();
+    if (n === 3 && this._state.detectMode === 'lokaal') this._detectEntities();
   }
 
   _renderStep1(c) {
@@ -3137,14 +3139,123 @@ class FinallyWizard extends HTMLElement {
   }
 
   _renderStep3(c) {
+    const mode = this._state.detectMode;
+    const vrm = this._state.vrm;
     c.innerHTML = '<h2>Serienummers detecteren</h2>' +
       '<p class="sub">Victron apparaten worden automatisch gevonden. Niet gevonden? Voer het serienummer handmatig in.</p>' +
-      '<div id="det-list"><div class="msg info"><span class="spinner"></span>Entiteiten ophalen...</div></div>' +
+      '<div class="toggle-grid" style="grid-template-columns:1fr 1fr;margin-bottom:20px">' +
+      '<div class="ti ' + (mode==='lokaal'?'on':'') + '" data-action="detectmode" data-mode="lokaal">' +
+      '<div class="ti-check"><span class="ti-checkmark">&#10003;</span></div>' +
+      '<div><div class="ti-lbl">Lokaal detecteren</div><div class="ti-sub">Dit apparaat, hier ter plaatse</div></div></div>' +
+      '<div class="ti ' + (mode==='vrm'?'on':'') + '" data-action="detectmode" data-mode="vrm">' +
+      '<div class="ti-check"><span class="ti-checkmark">&#10003;</span></div>' +
+      '<div><div class="ti-lbl">Op afstand via VRM</div><div class="ti-sub">Portal-ID + Access Token</div></div></div>' +
+      '</div>' +
+      (mode === 'vrm' ?
+        '<div id="vrm-form" style="margin-bottom:20px">' +
+        '<label>VRM PORTAL-ID</label>' +
+        '<input type="text" id="vrm-portalid" placeholder="bijv. 48e7da8657a1" value="' + (vrm.portalId||'') + '">' +
+        '<label style="margin-top:14px">VRM ACCESS TOKEN</label>' +
+        '<input type="text" id="vrm-token" placeholder="Token uit VRM \u2192 Preferences \u2192 Access tokens" value="' + (vrm.token||'') + '">' +
+        '<div class="btn-row"><button class="btn btn-p" data-action="vrmfetch" style="width:100%">Apparaten ophalen via VRM</button></div>' +
+        '</div>' : '') +
+      '<div id="det-list">' + (mode === 'vrm' ? '<div class="msg info">Vul Portal-ID en Access Token in, en klik op "Apparaten ophalen".</div>' : '<div class="msg info"><span class="spinner"></span>Entiteiten ophalen...</div>') + '</div>' +
       '<div id="btn3" style="display:none">' +
       '<div class="btn-row">' +
       '<button class="btn btn-s" data-action="step" data-n="2">‹ Terug</button>' +
       '<button class="btn btn-p" data-action="step" data-n="4">Volgende ›</button>' +
       '</div></div>';
+  }
+
+  async _fetchVrmDevices() {
+    const s = this._state;
+    const list = this.shadowRoot.getElementById('det-list');
+    const portalId = (this.shadowRoot.getElementById('vrm-portalid')||{}).value?.trim() || '';
+    const token = (this.shadowRoot.getElementById('vrm-token')||{}).value?.trim() || '';
+    s.vrm.portalId = portalId;
+    s.vrm.token = token;
+    if (!portalId || !token) {
+      list.innerHTML = '<div class="msg err">✗ Vul zowel Portal-ID als Access Token in.</div>';
+      return;
+    }
+    list.innerHTML = '<div class="msg info"><span class="spinner"></span>Verbinden met VRM...</div>';
+    try {
+      const instRes = await fetch('https://vrmapi.victronenergy.com/v2/users/me/installations', {
+        headers: { 'X-Authorization': 'Token ' + token }
+      });
+      if (!instRes.ok) throw new Error('VRM-login mislukt (HTTP ' + instRes.status + '). Klopt de token nog?');
+      const instData = await instRes.json();
+      const records = instData.records || [];
+      const inst = records.find(r => r.identifier === portalId) || records.find(r => String(r.idSite) === portalId);
+      if (!inst) throw new Error('Portal-ID "' + portalId + '" niet gevonden bij dit account. Gevonden installaties: ' + records.map(r=>r.identifier).join(', ') || '(geen)');
+      s.vrm.idSite = inst.idSite;
+
+      const diagRes = await fetch('https://vrmapi.victronenergy.com/v2/installations/' + inst.idSite + '/diagnostics', {
+        headers: { 'X-Authorization': 'Token ' + token }
+      });
+      if (!diagRes.ok) throw new Error('Kon apparaten niet ophalen (HTTP ' + diagRes.status + ')');
+      const diagData = await diagRes.json();
+      s.vrm.devices = diagData.records || [];
+      this._parseVrmDevices(list);
+    } catch (err) {
+      const corsHint = (err instanceof TypeError) ? '<br><br><em>Dit lijkt op een CORS-blokkade door de browser (geen contact met de VRM-server kunnen maken). Meld dit terug — dan bouwen we een server-side omweg via Home Assistant zelf.</em>' : '';
+      list.innerHTML = '<div class="msg err">✗ ' + err.message + corsHint + '</div>';
+    }
+  }
+
+  _parseVrmDevices(list) {
+    const s = this._state;
+    const devices = s.vrm.devices;
+
+    // Groepeer diagnostics-regels per apparaat-instance
+    const byInstance = {};
+    devices.forEach(r => {
+      const inst = r.instance !== undefined ? r.instance : (r.Instance !== undefined ? r.Instance : 'x');
+      if (!byInstance[inst]) byInstance[inst] = [];
+      byInstance[inst].push(r);
+    });
+
+    const results = [];
+    const findVal = (rows, ...keywords) => {
+      const row = rows.find(r => keywords.some(k => (r.description||r.Description||'').toLowerCase().includes(k)));
+      return row ? (row.formattedValue || row.rawValue || row.value || '') : null;
+    };
+
+    Object.entries(byInstance).forEach(([inst, rows]) => {
+      const productName = findVal(rows, 'product name', 'product id') || '';
+      const serial = findVal(rows, 'serial number') || ('instance-' + inst);
+      const pn = productName.toLowerCase();
+      if (pn.includes('quattro') || pn.includes('multiplus')) {
+        s.serials.quattro = serial;
+        results.push({ key:'quattro', found:true, name: productName || 'Quattro/MultiPlus', id: serial });
+      } else if (pn.includes('smartsolar') || pn.includes('mppt')) {
+        s.serials.mppt = serial;
+        results.push({ key:'mppt', found:true, name: productName || 'SmartSolar MPPT', id: serial });
+      } else if (pn.includes('smartshunt') || pn.includes('bmv')) {
+        s.serials.shunt = serial;
+        results.push({ key:'shunt', found:true, name: productName || 'SmartShunt', id: serial });
+      } else if (pn.includes('gx') || pn.includes('cerbo')) {
+        s.serials.cerbo = serial;
+        results.push({ key:'cerbo', found:true, name: productName || 'GX Device', id: serial });
+      } else if (productName) {
+        results.push({ key:'overig', found:true, name: productName, id: serial });
+      }
+    });
+
+    if (results.length === 0) {
+      list.innerHTML = '<div class="msg err">✗ Verbinding gelukt, maar geen herkenbare apparaten gevonden in de diagnostics-data. Mogelijk is het dataformaat van VRM anders dan verwacht — meld dit terug met de ruwe data (console).</div>';
+      console.log('VRM diagnostics raw data:', devices);
+      return;
+    }
+
+    list.innerHTML = '<div class="msg info" style="margin-bottom:12px">✓ Verbonden via VRM — ' + results.length + ' apparaat/apparaten gevonden.</div>' +
+      results.map(r => '<div class="det-item found"><div style="flex:1">' +
+        '<div class="di-name">' + r.name + '</div>' +
+        '<div class="di-id">' + r.id + '</div></div>' +
+        '<div class="di-status">&#10003; via VRM</div></div>').join('');
+
+    const btn3 = this.shadowRoot.getElementById('btn3');
+    if (btn3) btn3.style.display = 'block';
   }
 
   _detectEntities() {
@@ -3328,6 +3439,12 @@ class FinallyWizard extends HTMLElement {
     } else if (act === 'photo-click') {
       const inp = this.shadowRoot.getElementById('foto-input');
       if (inp) inp.click();
+    } else if (act === 'detectmode') {
+      this._state.detectMode = action.dataset.mode;
+      this._renderStep();
+      if (this._state.detectMode === 'lokaal') this._detectEntities();
+    } else if (act === 'vrmfetch') {
+      this._fetchVrmDevices();
     } else if (act === 'save') {
       this._saveConfig();
     }
