@@ -3188,7 +3188,7 @@ class FinallyWizard extends HTMLElement {
       if (instStatus && instStatus >= 400) throw new Error('VRM-login mislukt (HTTP ' + instStatus + '). Klopt de token nog?');
       const instContent = instResult?.response?.content;
       if (!instContent) throw new Error('Geen antwoord ontvangen van de rest_command-service. Is "rest_command: vrm_installations" toegevoegd aan configuration.yaml en is HA herstart?');
-      const instData = JSON.parse(instContent);
+      const instData = (typeof instContent === 'string') ? JSON.parse(instContent) : instContent;
       const records = instData.records || [];
       const inst = records.find(r => r.identifier === portalId) || records.find(r => String(r.idSite) === portalId);
       if (!inst) throw new Error('Portal-ID "' + portalId + '" niet gevonden bij dit account. Gevonden installaties: ' + (records.map(r=>r.identifier).join(', ') || '(geen)'));
@@ -3199,7 +3199,7 @@ class FinallyWizard extends HTMLElement {
       if (diagStatus && diagStatus >= 400) throw new Error('Kon apparaten niet ophalen (HTTP ' + diagStatus + ')');
       const diagContent = diagResult?.response?.content;
       if (!diagContent) throw new Error('Geen antwoord ontvangen van de rest_command-service voor diagnostics.');
-      const diagData = JSON.parse(diagContent);
+      const diagData = (typeof diagContent === 'string') ? JSON.parse(diagContent) : diagContent;
       s.vrm.devices = diagData.records || [];
       this._parseVrmDevices(list);
     } catch (err) {
