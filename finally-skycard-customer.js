@@ -3211,7 +3211,8 @@ class FinallyWizard extends HTMLElement {
       const diagContent = diagResult?.response?.content;
       if (!diagContent) throw new Error('Geen antwoord ontvangen van de rest_command-service voor diagnostics.');
       const diagData = (typeof diagContent === 'string') ? JSON.parse(diagContent) : diagContent;
-      s.vrm.devices = diagData.records || [];
+      s.vrm.devices = diagData.records || diagData || [];
+      console.log('VRM diagnostics raw data (full):', s.vrm.devices);
       this._parseVrmDevices(list);
     } catch (err) {
       list.innerHTML = '<div class="msg err">✗ ' + err.message + '</div>';
