@@ -3189,6 +3189,7 @@ class FinallyWizard extends HTMLElement {
       const instContent = instResult?.response?.content;
       if (!instContent) throw new Error('Geen antwoord ontvangen van de rest_command-service. Is "rest_command: vrm_installations" toegevoegd aan configuration.yaml en is HA herstart?');
       const instData = (typeof instContent === 'string') ? JSON.parse(instContent) : instContent;
+      console.log('VRM installations raw response:', instData);
       const records = instData.records || [];
       const inst = records.find(r => r.identifier === portalId) || records.find(r => String(r.idSite) === portalId);
       if (!inst) throw new Error('Portal-ID "' + portalId + '" niet gevonden bij dit account. Gevonden installaties: ' + (records.map(r=>r.identifier).join(', ') || '(geen)'));
