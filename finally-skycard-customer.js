@@ -3240,29 +3240,30 @@ class FinallyWizard extends HTMLElement {
       return row ? (row.formattedValue ?? row.rawValue ?? '') : null;
     };
 
+    const deviceTypeMap = {
+      'gateway': 'cerbo',
+      've.bus system': 'quattro',
+      'battery monitor': 'shunt',
+      'solar charger': 'mppt'
+    };
+
     Object.entries(byDevice).forEach(([key, rows]) => {
+      const deviceType = String(rows[0]?.Device || '').toLowerCase();
+      const mapped = deviceTypeMap[deviceType];
+      if (!mapped) return; // System overview / BMS / Generator start-stop / Temperature sensor: geen van de vier hoofdapparaten
       const productName = findVal(rows, 'MachineName') || rows[0]?.Device || '';
-      const serial = findVal(rows, 'Serial number', 'Serial Number', 'SerialNr') || ('instance-' + key);
-      const pn = String(productName).toLowerCase();
-      if (pn.includes('quattro') || pn.includes('multiplus')) {
-        s.serials.quattro = serial;
-        results.push({ key:'quattro', found:true, name: productName || 'Quattro/MultiPlus', id: serial });
-      } else if (pn.includes('smartsolar') || pn.includes('mppt')) {
-        s.serials.mppt = serial;
-        results.push({ key:'mppt', found:true, name: productName || 'SmartSolar MPPT', id: serial });
-      } else if (pn.includes('smartshunt') || pn.includes('bmv')) {
-        s.serials.shunt = serial;
-        results.push({ key:'shunt', found:true, name: productName || 'SmartShunt', id: serial });
-      } else if (pn.includes('gx') || pn.includes('cerbo')) {
-        s.serials.cerbo = serial;
-        results.push({ key:'cerbo', found:true, name: productName || 'GX Device', id: serial });
-      } else if (productName) {
-        results.push({ key:'overig', found:true, name: productName, id: serial });
-      }
+      const serial = findVal(rows, 'Serial number', 'Serial Number', 'SerialNr', 'Serial') || ('instance-' + key);
+      const niceNames = { cerbo: 'GX Device', quattro: 'Quattro/MultiPlus', shunt: 'SmartShunt', mppt: 'SmartSolar MPPT' };
+      s.serials[mapped] = serial;
+      if (mapped === 'cerbo') s.entities.load = serial; // GX Device wordt in stap 5 via entities.load getoond
+      results.push({ key: mapped, found: true, name: productName || niceNames[mapped], id: serial });
     });
 
     console.log('VRM apparaat-groepen gevonden (Device#instance → MachineName):',
       Object.entries(byDevice).map(([key, rows]) => key + ' → ' + (findVal(rows, 'MachineName') || '(geen MachineName)')).join(' | '));
+    console.log('VRM velden per apparaatgroep:', Object.entries(byDevice).map(([key, rows]) =>
+      key + ' → beschrijvingen: ' + [...new Set(rows.map(r => r.description))].join(', ')
+    ).join('\n'));
 
     if (results.length === 0) {
       list.innerHTML = '<div class="msg err">✗ Verbinding gelukt, maar geen herkenbare apparaten gevonden in de diagnostics-data. Mogelijk is het dataformaat van VRM anders dan verwacht — meld dit terug met de ruwe data (console).</div>';
