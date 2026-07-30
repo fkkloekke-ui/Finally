@@ -3182,8 +3182,18 @@ class FinallyWizard extends HTMLElement {
     try {
       if (!this._hass) throw new Error('Geen verbinding met Home Assistant beschikbaar.');
 
+      // Stap A: numerieke gebruikers-ID ophalen (VRM accepteert 'me' niet in /installations)
+      const meResult = await this._hass.callService('rest_command', 'vrm_me', { token }, undefined, true, true);
+      const meStatus = meResult?.response?.status_code;
+      if (meStatus && meStatus >= 400) throw new Error('VRM-login mislukt (HTTP ' + meStatus + '). Klopt de token nog?');
+      const meContent = meResult?.response?.content;
+      if (!meContent) throw new Error('Geen antwoord ontvangen van de rest_command-service "vrm_me". Is configuration.yaml bijgewerkt en HA herstart?');
+      const meData = (typeof meContent === 'string') ? JSON.parse(meContent) : meContent;
+      const userId = meData?.user?.id;
+      if (!userId) throw new Error('Kon gebruikers-ID niet uit VRM-antwoord halen.');
+
       // Server-side call via rest_command — omzeilt browser-CORS omdat HA zelf de aanroep doet, niet de browser.
-      const instResult = await this._hass.callService('rest_command', 'vrm_installations', { token }, undefined, true, true);
+      const instResult = await this._hass.callService('rest_command', 'vrm_installations', { token, user_id: userId }, undefined, true, true);
       const instStatus = instResult?.response?.status_code;
       if (instStatus && instStatus >= 400) throw new Error('VRM-login mislukt (HTTP ' + instStatus + '). Klopt de token nog?');
       const instContent = instResult?.response?.content;
