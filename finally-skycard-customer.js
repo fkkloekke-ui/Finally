@@ -3246,13 +3246,25 @@ class FinallyWizard extends HTMLElement {
       'battery monitor': 'shunt',
       'solar charger': 'mppt'
     };
+    const nameFieldMap = {
+      cerbo: 'MachineName',
+      quattro: 'Mk2 product name',
+      shunt: 'Model',
+      mppt: 'Solarcharger model'
+    };
+    const serialFieldMap = {
+      cerbo: 'Machine serial number',
+      quattro: 'Serial number of 1st device',
+      shunt: 'Serial Number',
+      mppt: 'Solar charger serial number'
+    };
 
     Object.entries(byDevice).forEach(([key, rows]) => {
       const deviceType = String(rows[0]?.Device || '').toLowerCase();
       const mapped = deviceTypeMap[deviceType];
       if (!mapped) return; // System overview / BMS / Generator start-stop / Temperature sensor: geen van de vier hoofdapparaten
-      const productName = findVal(rows, 'MachineName') || rows[0]?.Device || '';
-      const serial = findVal(rows, 'Serial number', 'Serial Number', 'SerialNr', 'Serial') || ('instance-' + key);
+      const productName = findVal(rows, nameFieldMap[mapped]) || rows[0]?.Device || '';
+      const serial = findVal(rows, serialFieldMap[mapped]) || ('instance-' + key);
       const niceNames = { cerbo: 'GX Device', quattro: 'Quattro/MultiPlus', shunt: 'SmartShunt', mppt: 'SmartSolar MPPT' };
       s.serials[mapped] = serial;
       if (mapped === 'cerbo') s.entities.load = serial; // GX Device wordt in stap 5 via entities.load getoond
