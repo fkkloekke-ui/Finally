@@ -1932,6 +1932,7 @@ class FinallySkyCardMobile extends HTMLElement {
 <style>
   :host {
     display: block;
+    --hero-height: ${(this._config && this._config.hero_height) || 220}px;
     font-family: 'Segoe UI', system-ui, sans-serif;
     background: #050e1a;
     min-height: 100vh;
@@ -1952,7 +1953,7 @@ class FinallySkyCardMobile extends HTMLElement {
   .hero {
     position: relative;
     width: 100%;
-    height: 220px;
+    height: var(--hero-height, 220px);
     overflow: hidden;
   }
   .hero-bg {
@@ -2185,7 +2186,7 @@ class FinallySkyCardMobile extends HTMLElement {
   <!-- ══ HERO ══ -->
   <div class="hero">
     <img class="hero-bg" src="${skyImg}"/>
-    <img src="/local/finally-card/boot.png" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
+    <img src="/local/finally-card/boot.png" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <div class="hero-top">
