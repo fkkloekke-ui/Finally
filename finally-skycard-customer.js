@@ -915,7 +915,7 @@ class FinallySkyCard extends HTMLElement {
   .batt-unit { display: flex; flex-direction: row; align-items: flex-start; gap: 6px; background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border-radius: 10px; padding: 7px 10px; border: 0.5px solid rgba(100,170,255,0.2); }
   .batt-detail { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.2); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
 
-  .pwrbars { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); z-index: 10; display: flex; flex-direction: row; gap: 100px; }
+  .pwrbars { position: absolute; left: 50%; bottom: var(--pwrbars-bottom, 9%); transform: translateX(-50%); z-index: 10; display: flex; flex-direction: row; gap: 100px; }
   .pbrwrap { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.2); border-radius: 10px; padding: 9px 16px; width: 280px; }
   .pbr-lbl { font-size: 11px; color: var(--lbl-mid); letter-spacing: 1px; margin-bottom: 6px; display: flex; justify-content: space-between; }
   .pbr-bar { height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden; }
@@ -950,6 +950,7 @@ class FinallySkyCard extends HTMLElement {
   if (c.sidebar_font_size) vars.push(`--sb-font:${c.sidebar_font_size}px`);
   if (c.weather_font_size) vars.push(`--weather-font:${c.weather_font_size}px`);
   if (c.bottom_font_scale) vars.push(`--bottom-scale:${c.bottom_font_scale}`);
+  if (c.pwrbars_bottom) vars.push(`--pwrbars-bottom:${c.pwrbars_bottom}%`);
   return vars.join(';');
 })()}">
  <div class="design-canvas" id="design-canvas">
@@ -1085,11 +1086,6 @@ class FinallySkyCard extends HTMLElement {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#88ccff"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>
           ${windKm} km/h ${windDir} (${windBft} Bft)
         </div>
-        <div class="wi">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="#00ccff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
-          ${waterhoogte} cm <span style="font-size:0.75em;opacity:0.6">(verw. ${waterhoogteVerw})</span>
-        </div>
-
       </div>
       ${knmiCode !== 'Groen' && knmiCode !== '--' ? '<div id="knmi-btn" data-code="'+knmiCode+'" style="cursor:pointer;margin-top:6px;display:inline-block;padding:4px 12px;background:'+(knmiCode==='Rood'?'rgba(80,10,10,0.6)':knmiCode==='Oranje'?'rgba(80,40,0,0.6)':'rgba(60,50,0,0.6)')+';border:1px solid '+(knmiCode==='Rood'?'rgba(255,80,80,0.6)':knmiCode==='Oranje'?'rgba(255,140,0,0.6)':'rgba(255,220,0,0.6)')+';border-radius:8px;font-size:12px;font-weight:700;color:'+(knmiCode==='Rood'?'#ff6666':knmiCode==='Oranje'?'#ffaa44':'#ffee44')+'">⚠ KNMI Code '+knmiCode+'</div>' : ''}
     </div>
@@ -1393,6 +1389,12 @@ ${(this._config && this._config.hide_bms) ? '' : `
       <div class="sl">GENERATOR</div>
       <div class="sv" style="color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'}">${genActive?'AAN':'UIT'}</div>
       <div class="ss">${genActive?genState:'Gestopt'}</div>
+    </div>
+
+    <div class="stat" style="border-color:rgba(0,204,255,0.2)">
+      <div class="sl">WATERHOOGTE</div>
+      <div class="sv" style="color:#00ccff">${waterhoogte} cm</div>
+      <div class="ss">verwacht ${waterhoogteVerw} cm</div>
     </div>
 
 
