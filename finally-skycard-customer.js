@@ -901,7 +901,7 @@ class FinallySkyCard extends HTMLElement {
   .val { font-size: 17px; font-weight: 700; color: #fff; line-height: 1.2; }
   .sub { font-size: 13px; color: var(--lbl-mid); }
   .wrow { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; justify-content: center; width: 100%; }
-  .wi { display: flex; align-items: center; gap: 7px; font-size: 17px; color: #fff; }
+  .wi { display: flex; align-items: center; gap: 7px; font-size: var(--weather-font, 17px); color: #fff; }
   .wi svg { flex-shrink: 0; width: 18px; height: 18px; }
 
   .grid-lbl { position: absolute; left: 300px; top: 640px; z-index: 10; }
@@ -921,9 +921,9 @@ class FinallySkyCard extends HTMLElement {
 
   .statsbar { position: absolute; bottom: 0; left: 0; right: 0; z-index: 10; padding: 6px 10px 8px; display: flex; gap: 5px; }
   .stat { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.15); border-radius: 10px; padding: 9px 12px; flex: 1; text-align: center; }
-  .sl { font-size: 11px; color: var(--lbl-dim); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 3px; }
-  .sv { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.1; }
-  .ss { font-size: 12px; color: var(--lbl-dim); margin-top: 2px; }
+  .sl { font-size: calc(11px * var(--bottom-scale, 1)); color: var(--lbl-dim); letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 3px; }
+  .sv { font-size: calc(18px * var(--bottom-scale, 1)); font-weight: 700; color: #fff; line-height: 1.1; }
+  .ss { font-size: calc(12px * var(--bottom-scale, 1)); color: var(--lbl-dim); margin-top: 2px; }
   .sr { display: flex; justify-content: space-between; margin-top: 2px; align-items: center; }
   .sk { font-size: 13px; color: var(--lbl-mid); }
   .sv2 { font-size: 13px; font-weight: 700; color: #fff; }
@@ -940,10 +940,19 @@ class FinallySkyCard extends HTMLElement {
     text-transform: uppercase; text-align: center; font-family: sans-serif; }
 </style>
 
-<div class="wrap" style="${(this._config && (this._config.sidebar_width || this._config.sidebar_icon_size || this._config.sidebar_font_size)) ? `--sb-width:${this._config.sidebar_width||96}px;--sb-icon:${this._config.sidebar_icon_size||40}px;--sb-font:${this._config.sidebar_font_size||11}px;` : ''}">
+<div class="wrap" style="${(() => {
+  const c = this._config || {};
+  const vars = [];
+  if (c.sidebar_width) vars.push(`--sb-width:${c.sidebar_width}px`);
+  if (c.sidebar_icon_size) vars.push(`--sb-icon:${c.sidebar_icon_size}px`);
+  if (c.sidebar_font_size) vars.push(`--sb-font:${c.sidebar_font_size}px`);
+  if (c.weather_font_size) vars.push(`--weather-font:${c.weather_font_size}px`);
+  if (c.bottom_font_scale) vars.push(`--bottom-scale:${c.bottom_font_scale}`);
+  return vars.join(';');
+})()}">
  <div class="design-canvas" id="design-canvas">
   <img class="bg" src="${skyImg}"/>
-  <img src="/local/finally-card/boot.png" style="position:absolute;bottom:18%;left:35%;width:38%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
+  <img src="/local/finally-card/boot.png" style="position:absolute;bottom:18%;left:35%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
 
   <!-- Erik op SUP — alleen bij mooi weer -->
   ${(wcond === 'sunny' || wcond === 'partlycloudy') && sunAbove ? `
@@ -1097,7 +1106,7 @@ class FinallySkyCard extends HTMLElement {
   </div>
 
   <!-- GRID label linksboven bij mast -->
-  <div class="grid-lbl">
+  <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top left;` : ''}">
     <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'}">
       <div class="lbl" style="letter-spacing:2px;font-size:12px">WALSTROOM</div>
       <div style="font-size:22px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
@@ -1205,9 +1214,16 @@ ${(this._config && this._config.hide_bms) ? '' : `
     </div>
 
     <!-- Totaal SOC — grote aparte tegel -->
-    <div class="batt-detail" style="flex:1;text-align:center;padding:10px 16px">
+    <div class="batt-detail" style="flex:${(this._config && this._config.soc_tile_flex) || 1};text-align:center;padding:10px 16px">
       <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Totaal SOC</div>
-      <div style="font-size:38px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${Math.round(battSoc)}%</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:10px">
+        <svg width="${(this._config && this._config.soc_icon_size) || 30}" height="${((this._config && this._config.soc_icon_size) || 30) * 0.55}" viewBox="0 0 48 26" fill="none">
+          <rect x="1" y="1" width="42" height="24" rx="4" stroke="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}" stroke-width="2"/>
+          <rect x="44" y="9" width="4" height="8" rx="1.5" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
+          <rect x="4" y="4" width="${Math.max(2, 36 * (battSoc/100))}" height="18" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}" opacity="0.85"/>
+        </svg>
+        <div style="font-size:${(this._config && this._config.soc_font_size) || 38}px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${Math.round(battSoc)}%</div>
+      </div>
       <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:8px">
         <div style="width:${battSoc}%;height:100%;background:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};border-radius:3px;transition:width 1s ease"></div>
       </div>
