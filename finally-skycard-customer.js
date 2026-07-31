@@ -28,7 +28,12 @@ class FinallySkyCard extends HTMLElement {
   _applyScale() {
     const canvas = this.shadowRoot && this.shadowRoot.getElementById('design-canvas');
     if (!canvas) return;
-    const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    let scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+    // Op kleine schermen (bijv. 10" kiosk-touchscreens) mag de tekst niet onleesbaar klein worden.
+    // Config-optie 'min_scale' zet een ondergrens; de kaart wordt dan uitgesneden (overflow:hidden op .wrap)
+    // in plaats van dat alles in verhouding krimpt. Standaard uit (geen wijziging voor bestaande grote schermen).
+    const minScale = (this._config && this._config.min_scale) ? Number(this._config.min_scale) : null;
+    if (minScale && scale < minScale) scale = minScale;
     canvas.style.transform = `translate(-50%, -50%) scale(${scale})`;
   }
 
