@@ -2301,6 +2301,7 @@ class FinallySkyCardMobile extends HTMLElement {
       </div>
     </div>
 
+    ${(this._config && this._config.hide_bms) ? '' : `
     <!-- BMS 1 -->
     <div class="card" style="border-color:rgba(0,255,136,0.2);margin-bottom:8px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -2326,6 +2327,7 @@ class FinallySkyCardMobile extends HTMLElement {
       <div class="row"><span class="row-lbl">Cycli</span><span class="row-val">${bms2Cycli}</span></div>
       ${celRow(2, 'jk_bms_2_jk_bms_2')}
     </div>
+    `}
   </div>
 
   <!-- ══ ZONNEPANELEN ══ -->
@@ -2395,12 +2397,14 @@ class FinallySkyCardMobile extends HTMLElement {
           <svg viewBox="0 0 120 36" style="width:80px;height:24px">${sparkSvg}</svg>
         </div>
       </div>
+      ${(this._config && this._config.hide_watertank) ? '' : `
       <div class="row">
         <span class="row-lbl">Watertank</span>
         <div style="text-align:right">
 <span class="row-val">—</span>
         </div>
       </div>
+      `}
     </div>
   </div>
 
@@ -2483,6 +2487,7 @@ class FinallySkyCardMobile extends HTMLElement {
     <!-- ══ VERWARMING + SYSTEMEN ══ -->
   <div class="section">
     <div class="section-title">Systemen</div>
+    ${(this._config && this._config.hide_douchepomp) ? '' : `
     <div class="card-grid">
 
       <!-- Douchepomp touchknop -->
@@ -2494,6 +2499,7 @@ class FinallySkyCardMobile extends HTMLElement {
         <div style="font-size:11px;color:rgba(255,255,255,0.35);margin-top:4px">tik om te schakelen</div>
       </div>
     </div>
+    `}
     <div class="card">
       <div class="row"><span class="row-lbl">Generator</span><span class="row-val" style="color:${genActive ? '#00ff88' : 'rgba(255,255,255,0.4)'}">${genActive ? '● Running' : '○ Gestopt'}</span></div>
       <div class="row"><span class="row-lbl">Quattro alarmen</span>
