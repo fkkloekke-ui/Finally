@@ -930,17 +930,17 @@ class FinallySkyCard extends HTMLElement {
 
   .sidebar { position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
     z-index: 15; display: flex; flex-direction: column; gap: 7px; }
-  .sb-btn { width: 96px; background: rgba(4,14,44,0.22); backdrop-filter: blur(14px);
+  .sb-btn { width: var(--sb-width, 96px); background: rgba(4,14,44,0.22); backdrop-filter: blur(14px);
     border: 0.5px solid rgba(100,170,255,0.22); border-radius: 16px; padding: 14px 0;
     display: flex; flex-direction: column; align-items: center; gap: 5px;
     cursor: pointer; user-select: none; -webkit-tap-highlight-color: transparent; }
   .sb-btn:active { background: rgba(4,14,44,0.60); border-color: rgba(100,170,255,0.6); }
-  .sb-icon { width: 40px; height: 40px; display: block; }
-  .sb-lbl { font-size: 11px; color: var(--lbl-sub); letter-spacing: 0.8px;
+  .sb-icon { width: var(--sb-icon, 40px); height: var(--sb-icon, 40px); display: block; }
+  .sb-lbl { font-size: var(--sb-font, 11px); color: var(--lbl-sub); letter-spacing: 0.8px;
     text-transform: uppercase; text-align: center; font-family: sans-serif; }
 </style>
 
-<div class="wrap">
+<div class="wrap" style="${(this._config && (this._config.sidebar_width || this._config.sidebar_icon_size || this._config.sidebar_font_size)) ? `--sb-width:${this._config.sidebar_width||96}px;--sb-icon:${this._config.sidebar_icon_size||40}px;--sb-font:${this._config.sidebar_font_size||11}px;` : ''}">
  <div class="design-canvas" id="design-canvas">
   <img class="bg" src="${skyImg}"/>
   <img src="/local/finally-card/boot.png" style="position:absolute;bottom:18%;left:35%;width:38%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
@@ -1168,7 +1168,7 @@ class FinallySkyCard extends HTMLElement {
   <!-- BATTERIJ PANEEL rechtsonder: elke accu naast zijn BMS tegel -->
   <div class="batt-panel">
     <div class="batt-row">
-
+${(this._config && this._config.hide_bms) ? '' : `
       <!-- BMS 1: accu + detail naast elkaar -->
       <div class="batt-unit" style="border-color:rgba(0,255,136,0.2)">
         ${this._battSvg(bms1Soc, 'BMS 1', '#00ff88', battChar, 'bc1')}
@@ -1192,7 +1192,7 @@ class FinallySkyCard extends HTMLElement {
           <div class="sr"><span class="sk">Cycli</span><span class="sv2">${bms2Cycli}</span></div>
         </div>
       </div>
-
+`}
     </div>
 
     <!-- Zon onder + Totaal SOC naast elkaar -->
