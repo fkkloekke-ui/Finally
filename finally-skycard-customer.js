@@ -1206,9 +1206,9 @@ ${(this._config && this._config.hide_bms) ? '' : `
     <div style="display:flex;flex-direction:row;gap:5px;width:100%">
 
     <!-- ZON ONDER tegel -->
-    <div class="batt-detail" style="text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
-      <div style="font-size:9px;color:rgba(255,160,60,0.5);letter-spacing:1px">ZON ONDER</div>
-      <div style="font-size:14px;font-weight:700;color:rgba(255,160,80,0.9);display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,160,80,0.9)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 12v4" stroke-width="2"/><path d="M9 15l3 3 3-3" stroke-width="2"/></svg>${zonOnd}</div>
+    <div class="batt-detail" style="background:rgba(4,14,44,0.55);text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+      <div style="font-size:9px;color:rgba(255,180,90,0.85);letter-spacing:1px">ZON ONDER</div>
+      <div style="font-size:14px;font-weight:700;color:#ffb050;display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb050" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 12v4" stroke-width="2"/><path d="M9 15l3 3 3-3" stroke-width="2"/></svg>${zonOnd}</div>
     </div>
 
     <!-- Totaal SOC — grote aparte tegel -->
@@ -1216,9 +1216,9 @@ ${(this._config && this._config.hide_bms) ? '' : `
       <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Totaal SOC</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:10px">
         <svg width="${(this._config && this._config.soc_icon_size) || 30}" height="${((this._config && this._config.soc_icon_size) || 30) * 0.55}" viewBox="0 0 48 26" fill="none">
-          <rect x="1" y="1" width="42" height="24" rx="4" stroke="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}" stroke-width="2"/>
-          <rect x="44" y="9" width="4" height="8" rx="1.5" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
-          <rect x="4" y="4" width="${Math.max(2, 36 * (battSoc/100))}" height="18" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}" opacity="0.85"/>
+          <rect x="1" y="1" width="42" height="24" rx="4" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+          <rect x="44" y="9" width="4" height="8" rx="1.5" fill="rgba(255,255,255,0.55)"/>
+          <rect x="4" y="4" width="${Math.max(4, 36 * (battSoc/100))}" height="18" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
         </svg>
         <div style="font-size:${(this._config && this._config.soc_font_size) || 38}px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${Math.round(battSoc)}%</div>
       </div>
