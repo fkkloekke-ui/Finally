@@ -75,6 +75,7 @@ class FinallySkyCard extends HTMLElement {
       this._historyLoaded = true;
       this._loadWaterHistory();
       this._loadForecast();
+      this._loadWaterForecast();
     }
   }
 
@@ -543,6 +544,19 @@ class FinallySkyCard extends HTMLElement {
         this._render();
       }
     } catch(e) { console.warn('Finally SkyCard: waterhistorie laden mislukt', e); }
+  }
+
+  _loadWaterForecast() {
+    if (!this._hass) return;
+    try {
+      const fc = this._hass.states['sensor.hasselt_zwarte_water_waterhoogte_verwacht']?.attributes?.Forecast;
+      if (Array.isArray(fc) && fc.length) {
+        this._waterForecast = fc
+          .map(p => ({ t: new Date(p.Time).getTime(), v: parseFloat(p.Value) }))
+          .filter(p => !isNaN(p.v) && !isNaN(p.t));
+        this._render();
+      }
+    } catch(e) { console.warn('Finally SkyCard: waterprognose laden mislukt', e); }
   }
 
   async _loadForecast() {
@@ -1394,8 +1408,8 @@ ${(this._config && this._config.hide_bms) ? '' : `
 
     <div class="stat" style="border-color:rgba(0,204,255,0.2)">
       <div class="sl">WATERHOOGTE</div>
-      <div class="sv" style="color:#00ccff">${waterhoogte} cm</div>
-      <div class="ss">verwacht ${waterhoogteVerw} cm</div>
+      <div class="sv" style="color:#00d7ff">${waterhoogte} cm</div>
+      <svg viewBox="0 0 160 44" width="100%" height="44" style="margin-top:2px;display:block">${sparkline}</svg>
     </div>
 
 
