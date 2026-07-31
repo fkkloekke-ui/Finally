@@ -756,6 +756,8 @@ class FinallySkyCard extends HTMLElement {
     const _windDirs  = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
     const windDir    = _wAttr ? _windDirs[Math.round(_windBear / 22.5) % 16] : '--';
     const windBft    = _wAttr ? (windKm < 1 ? 0 : windKm < 6 ? 1 : windKm < 12 ? 2 : windKm < 20 ? 3 : windKm < 29 ? 4 : windKm < 39 ? 5 : windKm < 50 ? 6 : windKm < 62 ? 7 : windKm < 75 ? 8 : windKm < 89 ? 9 : windKm < 103 ? 10 : windKm < 117 ? 11 : 12) : '--';
+    const waterhoogte     = hass ? s('sensor.hasselt_zwarte_water_waterhoogte').toFixed(0) : '--';
+    const waterhoogteVerw = hass ? s('sensor.hasselt_zwarte_water_waterhoogte_verwacht').toFixed(0) : '--';
     const p2000      = hass ? st('input_text.laatste_p2000_bericht') : '--';
     const scheepvaart = hass ? st('sensor.scheepvaart_tekst') : '--';
     const knmiCode   = hass ? st('sensor.knmi_weercode') : 'Groen';
@@ -1085,7 +1087,7 @@ class FinallySkyCard extends HTMLElement {
         </div>
         <div class="wi">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#00ccff"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
-          -- cm
+          ${waterhoogte} cm <span style="font-size:0.75em;opacity:0.6">(verw. ${waterhoogteVerw})</span>
         </div>
 
       </div>
