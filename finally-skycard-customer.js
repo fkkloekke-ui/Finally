@@ -712,6 +712,9 @@ class FinallySkyCard extends HTMLElement {
     const loadTeken  = (battPow < -10 && gridW < 20) ? '−' : '';  // accu → boot = min teken
     const battSoc    = hass ? s('sensor.smartshunt_hq2224ru6gc_batterij') : 0;
     const battV      = hass ? s('sensor.smartshunt_hq2224ru6gc_spanning').toFixed(1) : '--';
+    const battVGeneric = hass ? s('sensor.gx_device_dc_battery_voltage').toFixed(2) : '--';
+    const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
+    const windW       = hass ? s(windEntity).toFixed(0) : '--';
     const battA      = hass ? s('sensor.smartshunt_hq2224ru6gc_stroom').toFixed(1) : '--';
     const battWh     = hass ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--';
     const _soc30wh   = hass ? s('sensor.accu_beschikbaar_wh') * 0.70 : 0;
@@ -763,6 +766,11 @@ class FinallySkyCard extends HTMLElement {
     const genManualOn    = hass ? st('switch.generator_start_stop_manual_start') : 'off';
     const genRuntimeToday = hass ? s('sensor.generator_start_stop_today_runtime').toFixed(1) : '--';
     const genRuntimeTotal = hass ? s('sensor.generator_start_stop_total_runtime').toFixed(0) : '--';
+    const kabolaEntity     = (this._config && this._config.kabola_climate_entity) || 'climate.kabola';
+    const kabolaState      = hass ? hass.states[kabolaEntity] : null;
+    const kabolaActief     = kabolaState ? (kabolaState.state !== 'off' && kabolaState.state !== 'unavailable') : false;
+    const kabolaDoelTemp   = kabolaState ? (kabolaState.attributes.temperature ?? '--') : '--';
+    const kabolaHuidigeTemp = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
 
     // ── Omgeving ──
     const tempBinnen = hass ? s('sensor.ewelink_snzb_02p_temperatuur').toFixed(1) : '--';
@@ -1238,6 +1246,14 @@ ${(this._config && this._config.hide_bms) ? '' : `
       </div>
     </div>
 
+${(this._config && this._config.show_battery_voltage) ? `
+    <!-- ACCUSPANNING tegel — optioneel, handig voor installaties zonder BMS/SOC-%  (bv. loodaccu's) -->
+    <div class="batt-detail" style="width:100%;text-align:center;padding:8px 14px">
+      <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:2px">Accuspanning</div>
+      <div style="font-size:22px;font-weight:800;color:${battChar?'#00cc66':'#ffa500'}">${battVGeneric} V</div>
+    </div>
+` : ''}
+
     <!-- Details tegel: spanning/stroom/beschikbaar/autonomie -->
     <div class="batt-detail" style="width:100%;display:flex;flex-direction:column;gap:4px;padding:9px 14px">
       <div class="sr" style="gap:10px"><span class="sk">Spanning</span><span class="sv2">${battV} V</span></div>
@@ -1245,6 +1261,17 @@ ${(this._config && this._config.hide_bms) ? '' : `
       <div class="sr" style="gap:10px"><span class="sk">Beschikbaar</span><span class="sv2" style="color:#88ccff">${battWh} Wh</span></div>
       <div class="sr" style="gap:10px"><span class="sk">Autonomie</span><span class="sv2" style="color:#aaffcc">${battDuur} uur te gaan</span></div>
     </div>
+
+${(this._config && this._config.show_wind) ? `
+    <!-- WIND tegel — optioneel, voor installaties met een windturbine -->
+    <div class="batt-detail" style="width:100%;background:rgba(4,14,44,0.55);text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+      <div style="font-size:9px;color:rgba(150,220,255,0.85);letter-spacing:1px">WIND</div>
+      <div style="font-size:16px;font-weight:700;color:#96dcff;display:flex;align-items:center;gap:5px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#96dcff" stroke-width="2" stroke-linecap="round"><path d="M9.6 4.6A2 2 0 1 1 11 8H2M12.6 19.4A2 2 0 1 0 14 16H2M17.6 7.6A2 2 0 1 1 19 11H2"/></svg>
+        ${windW} W
+      </div>
+    </div>
+` : ''}
 
     <!-- ZON ONDER tegel — nu onderaan, volle breedte -->
     <div class="batt-detail" style="width:100%;background:rgba(4,14,44,0.55);text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
@@ -1370,7 +1397,7 @@ ${(this._config && this._config.hide_bms) ? '' : `
 
 
 
-    <div class="stat" style="flex:1.4;border-color:rgba(${sc.replace('#','').match(/../g)?'100,170,255':'100,170,255'},0.25)">
+    <div class="stat" style="flex:${(this._config && this._config.omvormer_flex) || 1};border-color:rgba(${sc.replace('#','').match(/../g)?'100,170,255':'100,170,255'},0.25)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
         <div class="sl" style="margin:0">OMVORMER</div>
         <div style="display:flex;gap:5px;align-items:center">
@@ -1400,7 +1427,7 @@ ${(this._config && this._config.hide_bms) ? '' : `
 
 
 
-    <div class="stat" style="border-color:rgba(${genActive?'0,255,100':'80,80,120'},0.2);display:flex;flex-direction:column;gap:4px">
+    <div class="stat" style="flex:${(this._config && this._config.generator_flex) || 1};border-color:rgba(${genActive?'0,255,100':'80,80,120'},0.2);display:flex;flex-direction:column;gap:4px">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div class="sl" style="margin:0">GENERATOR</div>
         <div id="gen-toggle-btn" data-entity="switch.generator_start_stop_manual_start" data-state="${genManualOn}"
@@ -1415,6 +1442,15 @@ ${(this._config && this._config.hide_bms) ? '' : `
         <div><span style="font-size:9px;color:rgba(255,255,255,0.35)">TOTAAL</span><br><span style="font-size:12px;font-weight:700">${genRuntimeTotal} u</span></div>
       </div>
     </div>
+
+${(this._config && this._config.show_kabola) ? `
+    <!-- KABOLA verwarming — optioneel, alleen zichtbaar met show_kabola:true + kabola_climate_entity -->
+    <div class="stat" data-kabola-toggle style="cursor:pointer;flex:${(this._config.kabola_flex) || 1};border-color:rgba(255,120,60,0.2);display:flex;flex-direction:column;gap:4px">
+      <div class="sl" style="margin:0">KABOLA</div>
+      <div class="sv" style="color:${kabolaActief?'#ff8844':'rgba(255,255,255,0.3)'}">${kabolaActief?'AAN':'UIT'}</div>
+      <div class="ss">Doel: ${kabolaDoelTemp}°C · Nu: ${kabolaHuidigeTemp}°C</div>
+    </div>
+` : ''}
 
     <div class="stat" style="border-color:rgba(0,204,255,0.2)">
       <div class="sl">WATERHOOGTE</div>
@@ -1474,6 +1510,19 @@ ${(this._config && this._config.hide_bms) ? '' : `
         const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
         this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
           entity_id: 'switch.generator_start_stop_manual_start'
+        });
+      };
+    }
+
+    // Kabola verwarming aan/uit (indien geconfigureerd)
+    const kabolaTile = this.shadowRoot.querySelector('[data-kabola-toggle]');
+    if (kabolaTile && this._hass && this._config && this._config.kabola_climate_entity) {
+      kabolaTile.onclick = (e) => {
+        e.stopPropagation();
+        const ent = this._config.kabola_climate_entity;
+        const aan = this._hass.states[ent]?.state !== 'off';
+        this._hass.callService('climate', 'set_hvac_mode', {
+          entity_id: ent, hvac_mode: aan ? 'off' : 'heat'
         });
       };
     }
