@@ -760,6 +760,9 @@ class FinallySkyCard extends HTMLElement {
     // ── Extra ──
     const genState   = hass ? st('sensor.generator_start_stop_run_state') : '--';
     const genActive  = genState === 'running';
+    const genManualOn    = hass ? st('switch.generator_start_stop_manual_start') : 'off';
+    const genRuntimeToday = hass ? s('sensor.generator_start_stop_today_runtime').toFixed(1) : '--';
+    const genRuntimeTotal = hass ? s('sensor.generator_start_stop_total_runtime').toFixed(0) : '--';
 
     // ── Omgeving ──
     const tempBinnen = hass ? s('sensor.ewelink_snzb_02p_temperatuur').toFixed(1) : '--';
@@ -1121,7 +1124,7 @@ class FinallySkyCard extends HTMLElement {
 
   <!-- GRID label linksboven bij mast -->
   <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top left;` : ''}">
-    <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'}">
+    <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'};${(this._config && this._config.walstroom_width) ? `min-width:${this._config.walstroom_width}px;` : ''}">
       <div class="lbl" style="letter-spacing:2px;font-size:12px">WALSTROOM</div>
       <div style="font-size:22px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
         ${gridActive ? gridW+' W' : gridSpanning ? acInV+' V' : 'OFF-GRID'}
@@ -1384,15 +1387,15 @@ ${(this._config && this._config.hide_bms) ? '' : `
         </div>
       </div>
       <div style="display:flex;gap:10px;align-items:center">
-        <div style="display:flex;flex-direction:column;align-items:center;background:rgba(${sc==='#00ff88'?'0,255,136':'255,153,0'},0.08);border:0.5px solid ${sc};border-radius:6px;padding:3px 8px">
-          <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1px">MODUS</div>
-          <div style="font-size:12px;font-weight:800;color:${sc}">${sl}</div>
+        <div style="display:flex;flex-direction:column;align-items:center;background:rgba(${sc==='#00ff88'?'0,255,136':'255,153,0'},0.08);border:0.5px solid ${sc};border-radius:6px;padding:5px 12px">
+          <div style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1px">MODUS</div>
+          <div style="font-size:16px;font-weight:800;color:${sc}">${sl}</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:2px;flex:1">
-          <div class="sr"><span class="sk">AC uit</span><span class="sv2">${acV} V · ${acHz} Hz</span></div>
-          <div class="sr"><span class="sk">AC in</span><span class="sv2" style="color:${gridActive?'#00aaff':gridSpanning?'rgba(0,170,255,0.5)':'rgba(255,255,255,0.3)'}">${gridActive?acInV+' V · '+gridW+' W':gridSpanning?acInV+' V (stand-by)':'—'}</span></div>
-          <div class="sr"><span class="sk">DC</span><span class="sv2">${dcV} V</span></div>
-          <div class="sr"><span class="sk">Vermogen</span><span class="sv2">${acOutW} W</span></div>
+        <div style="display:flex;flex-direction:column;gap:4px;flex:1">
+          <div class="sr" style="font-size:14px"><span class="sk">AC uit</span><span class="sv2">${acV} V · ${acHz} Hz</span></div>
+          <div class="sr" style="font-size:14px"><span class="sk">AC in</span><span class="sv2" style="color:${gridActive?'#00aaff':gridSpanning?'rgba(0,170,255,0.5)':'rgba(255,255,255,0.3)'}">${gridActive?acInV+' V · '+gridW+' W':gridSpanning?acInV+' V (stand-by)':'—'}</span></div>
+          <div class="sr" style="font-size:14px"><span class="sk">DC</span><span class="sv2">${dcV} V</span></div>
+          <div class="sr" style="font-size:14px"><span class="sk">Vermogen</span><span class="sv2">${acOutW} W</span></div>
         </div>
       </div>
     </div>
@@ -1401,10 +1404,20 @@ ${(this._config && this._config.hide_bms) ? '' : `
 
 
 
-    <div class="stat" style="border-color:rgba(${genActive?'0,255,100':'80,80,120'},0.2)">
-      <div class="sl">GENERATOR</div>
+    <div class="stat" style="border-color:rgba(${genActive?'0,255,100':'80,80,120'},0.2);display:flex;flex-direction:column;gap:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <div class="sl" style="margin:0">GENERATOR</div>
+        <div id="gen-toggle-btn" data-entity="switch.generator_start_stop_manual_start" data-state="${genManualOn}"
+             style="cursor:pointer;width:38px;height:20px;border-radius:10px;background:${genManualOn==='on'?'#00cc66':'rgba(255,255,255,0.15)'};position:relative;transition:background 0.2s">
+          <div style="position:absolute;top:2px;left:${genManualOn==='on'?'20px':'2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left 0.2s"></div>
+        </div>
+      </div>
       <div class="sv" style="color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'}">${genActive?'AAN':'UIT'}</div>
-      <div class="ss">${genActive?genState:'Gestopt'}</div>
+      <div class="ss">${genActive?genState:'Gestopt'}${genActive && gridW>20 ? ' · '+gridW+' W' : ''}</div>
+      <div style="display:flex;gap:10px;margin-top:2px">
+        <div><span style="font-size:9px;color:rgba(255,255,255,0.35)">VANDAAG</span><br><span style="font-size:12px;font-weight:700">${genRuntimeToday} u</span></div>
+        <div><span style="font-size:9px;color:rgba(255,255,255,0.35)">TOTAAL</span><br><span style="font-size:12px;font-weight:700">${genRuntimeTotal} u</span></div>
+      </div>
     </div>
 
     <div class="stat" style="border-color:rgba(0,204,255,0.2)">
@@ -1453,6 +1466,18 @@ ${(this._config && this._config.hide_bms) ? '' : `
         const aan = this._hass.states['switch.walstroom_socket_1']?.state === 'on';
         this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
           entity_id: 'switch.walstroom_socket_1'
+        });
+      };
+    }
+
+    // Generator start/stop knop
+    const genToggleBtn = this.shadowRoot.getElementById('gen-toggle-btn');
+    if (genToggleBtn && this._hass) {
+      genToggleBtn.onclick = (e) => {
+        e.stopPropagation();
+        const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
+        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
+          entity_id: 'switch.generator_start_stop_manual_start'
         });
       };
     }
