@@ -1848,6 +1848,7 @@ class FinallySkyCardMobile extends HTMLElement {
     // ── Accu ──
     const battSoc   = s('sensor.smartshunt_hq2224ru6gc_batterij');
     const battV     = s('sensor.smartshunt_hq2224ru6gc_spanning').toFixed(2);
+    const battVGeneric = s('sensor.gx_device_dc_battery_voltage').toFixed(2);
     const battA     = s('sensor.smartshunt_hq2224ru6gc_stroom').toFixed(1);
     const battWh    = s('sensor.accu_beschikbaar_wh').toFixed(0);
     const _battPowM  = s('sensor.gx_device_dc_battery_power');
@@ -1928,6 +1929,16 @@ class FinallySkyCardMobile extends HTMLElement {
     // ── Overig ──
     const genActive  = st('sensor.generator_start_stop_run_state') === 'running';
     const genState   = st('sensor.generator_start_stop_run_state');
+    const genManualOn    = st('switch.generator_start_stop_manual_start');
+    const genRuntimeToday = s('sensor.generator_start_stop_today_runtime').toFixed(1);
+    const genRuntimeTotal = s('sensor.generator_start_stop_total_runtime').toFixed(0);
+    const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
+    const windW       = s(windEntity).toFixed(0);
+    const kabolaEntity      = (this._config && this._config.kabola_climate_entity) || 'climate.kabola';
+    const kabolaState        = this._hass ? this._hass.states[kabolaEntity] : null;
+    const kabolaActief       = kabolaState ? (kabolaState.state !== 'off' && kabolaState.state !== 'unavailable') : false;
+    const kabolaDoelTemp     = kabolaState ? (kabolaState.attributes.temperature ?? '--') : '--';
+    const kabolaHuidigeTemp  = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
     const gridActive  = s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1') > 20;
     const gridSpanning = parseFloat(acInV) > 100;
     const walSocketAan = st('switch.walstroom_socket_1') === 'on';
@@ -2353,6 +2364,13 @@ class FinallySkyCardMobile extends HTMLElement {
   <div class="section">
     <div class="section-title">Accubank</div>
     <div class="card-grid">
+      ${(this._config && this._config.show_battery_voltage) ? `
+      <div class="mini-card">
+        <div class="lbl">Accuspanning</div>
+        <div class="val-lg" style="color:${battChar ? '#00cc66' : '#ffa500'}">${battVGeneric} V</div>
+        <div class="sub">DC bus</div>
+      </div>
+      ` : ''}
       <div class="mini-card">
         <div class="lbl">Spanning</div>
         <div class="val-lg" style="color:#aaffcc">${battV} V</div>
@@ -2401,6 +2419,27 @@ class FinallySkyCardMobile extends HTMLElement {
     </div>
     `}
   </div>
+
+${(this._config && this._config.show_generator) ? `
+  <!-- ══ GENERATOR ══ -->
+  <div class="section">
+    <div class="section-title">Generator</div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'}">${genActive?'AAN':'UIT'}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4)">${genActive?genState:'Gestopt'}</div>
+        </div>
+        <div id="m-gen-toggle" data-entity="switch.generator_start_stop_manual_start"
+             style="cursor:pointer;width:46px;height:26px;border-radius:13px;background:${genManualOn==='on'?'#00cc66':'rgba(255,255,255,0.15)'};position:relative;transition:background 0.2s">
+          <div style="position:absolute;top:3px;left:${genManualOn==='on'?'23px':'3px'};width:20px;height:20px;border-radius:50%;background:#fff;transition:left 0.2s"></div>
+        </div>
+      </div>
+      <div class="row"><span class="row-lbl">Draaiuren vandaag</span><span class="row-val">${genRuntimeToday} u</span></div>
+      <div class="row"><span class="row-lbl">Draaiuren totaal</span><span class="row-val">${genRuntimeTotal} u</span></div>
+    </div>
+  </div>
+` : ''}
 
   <!-- ══ ZONNEPANELEN ══ -->
   <div class="section">
@@ -2480,6 +2519,22 @@ class FinallySkyCardMobile extends HTMLElement {
     </div>
   </div>
 
+${(this._config && this._config.show_kabola) ? `
+  <!-- ══ KABOLA VERWARMING ══ -->
+  <div class="section">
+    <div class="section-title">Kabola verwarming</div>
+    <div class="card" id="m-kabola-toggle" style="cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:${kabolaActief?'#ff8844':'rgba(255,255,255,0.3)'}">${kabolaActief?'AAN':'UIT'}</div>
+          <div style="font-size:12px;color:rgba(255,255,255,0.4)">Doel: ${kabolaDoelTemp}°C · Nu: ${kabolaHuidigeTemp}°C</div>
+        </div>
+        <div style="font-size:28px">🔥</div>
+      </div>
+    </div>
+  </div>
+` : ''}
+
   <!-- ══ WEER & OMGEVING ══ -->
   <div class="section">
     <div class="section-title">Weer & omgeving</div>
@@ -2534,6 +2589,13 @@ class FinallySkyCardMobile extends HTMLElement {
           <div style="font-size:16px;font-weight:700;color:#aaaaff">${baro} hPa</div>
         </div>
       </div>
+
+      ${(this._config && this._config.show_wind) ? `
+      <div class="row" style="border-top:0.5px solid rgba(255,255,255,0.06);padding-top:8px;margin-top:8px">
+        <span class="row-lbl">Windturbine vermogen</span>
+        <span class="row-val" style="color:#96dcff">${windW} W</span>
+      </div>
+      ` : ''}
 
       <!-- 5-daagse forecast -->
       ${wxForecast.length > 0 ? `
@@ -2778,6 +2840,31 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── Event listeners ──
     const verwknop  = this.shadowRoot.getElementById('m-verwknop');
+
+    // Generator start/stop knop
+    const mGenToggle = this.shadowRoot.getElementById('m-gen-toggle');
+    if (mGenToggle && this._hass) {
+      mGenToggle.onclick = (e) => {
+        e.stopPropagation();
+        const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
+        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
+          entity_id: 'switch.generator_start_stop_manual_start'
+        });
+      };
+    }
+
+    // Kabola verwarming aan/uit
+    const mKabolaToggle = this.shadowRoot.getElementById('m-kabola-toggle');
+    if (mKabolaToggle && this._hass && this._config && this._config.kabola_climate_entity) {
+      mKabolaToggle.onclick = (e) => {
+        e.stopPropagation();
+        const ent = this._config.kabola_climate_entity;
+        const aan = this._hass.states[ent]?.state !== 'off';
+        this._hass.callService('climate', 'set_hvac_mode', {
+          entity_id: ent, hvac_mode: aan ? 'off' : 'heat'
+        });
+      };
+    }
     const mVerwPopup = this.shadowRoot.getElementById('m-verw-popup');
     const mVerwToggle = this.shadowRoot.getElementById('m-verw-toggle');
     const mVerwHuidig = this.shadowRoot.getElementById('m-verw-huidig');
