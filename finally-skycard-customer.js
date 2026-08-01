@@ -928,7 +928,7 @@ class FinallySkyCard extends HTMLElement {
   .fbox { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border-radius: 10px; padding: 8px 14px; text-align: center; min-width: 100px; }
   .zonlbl { position: absolute; z-index: 10; background: rgba(4,14,44,0.18); backdrop-filter: blur(8px); border-radius: 8px; padding: 4px 10px; text-align: center; border: 0.5px solid rgba(255,200,80,0.2); }
 
-  .batt-panel { position: absolute; right: 8px; top: 200px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .batt-panel { position: absolute; right: 8px; top: 200px; z-index: 10; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; min-width: var(--soc-panel-width, 280px); }
   .batt-row { display: flex; flex-direction: column; gap: 5px; align-items: flex-end; }
   .batt-unit { display: flex; flex-direction: row; align-items: flex-start; gap: 6px; background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border-radius: 10px; padding: 7px 10px; border: 0.5px solid rgba(100,170,255,0.2); }
   .batt-detail { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.2); border-radius: 10px; padding: 8px 12px; font-size: 14px; }
@@ -969,6 +969,7 @@ class FinallySkyCard extends HTMLElement {
   if (c.weather_font_size) vars.push(`--weather-font:${c.weather_font_size}px`);
   if (c.bottom_font_scale) vars.push(`--bottom-scale:${c.bottom_font_scale}`);
   if (c.pwrbars_bottom) vars.push(`--pwrbars-bottom:${c.pwrbars_bottom}%`);
+  if (c.soc_panel_width) vars.push(`--soc-panel-width:${c.soc_panel_width}px`);
   return vars.join(';');
 })()}">
  <div class="design-canvas" id="design-canvas">
@@ -1221,17 +1222,8 @@ ${(this._config && this._config.hide_bms) ? '' : `
 `}
     </div>
 
-    <!-- Zon onder + Totaal SOC naast elkaar -->
-    <div style="display:flex;flex-direction:row;gap:5px;width:100%">
-
-    <!-- ZON ONDER tegel -->
-    <div class="batt-detail" style="background:rgba(4,14,44,0.55);text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
-      <div style="font-size:9px;color:rgba(255,180,90,0.85);letter-spacing:1px">ZON ONDER</div>
-      <div style="font-size:14px;font-weight:700;color:#ffb050;display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb050" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 12v4" stroke-width="2"/><path d="M9 15l3 3 3-3" stroke-width="2"/></svg>${zonOnd}</div>
-    </div>
-
-    <!-- Totaal SOC — grote aparte tegel -->
-    <div class="batt-detail" style="flex:${(this._config && this._config.soc_tile_flex) || 1};text-align:center;padding:10px 16px">
+    <!-- Totaal SOC — nu volle breedte (was voorheen samen met Zon Onder) -->
+    <div class="batt-detail" style="width:100%;flex:${(this._config && this._config.soc_tile_flex) || 1};text-align:center;padding:10px 16px">
       <div style="font-size:9px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Totaal SOC</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:10px">
         <svg width="${(this._config && this._config.soc_icon_size) || 30}" height="${((this._config && this._config.soc_icon_size) || 30) * 0.55}" viewBox="0 0 48 26" fill="none">
@@ -1246,14 +1238,18 @@ ${(this._config && this._config.hide_bms) ? '' : `
       </div>
     </div>
 
-    </div><!-- einde zon-onder + soc rij -->
-
     <!-- Details tegel: spanning/stroom/beschikbaar/autonomie -->
     <div class="batt-detail" style="width:100%;display:flex;flex-direction:column;gap:4px;padding:9px 14px">
       <div class="sr" style="gap:10px"><span class="sk">Spanning</span><span class="sv2">${battV} V</span></div>
       <div class="sr" style="gap:10px"><span class="sk">Stroom</span><span class="sv2" style="color:${battChar?'#00ff88':'#ff9900'}">${battChar?'▲':'▼'} ${Math.abs(parseFloat(battA))} A</span></div>
       <div class="sr" style="gap:10px"><span class="sk">Beschikbaar</span><span class="sv2" style="color:#88ccff">${battWh} Wh</span></div>
       <div class="sr" style="gap:10px"><span class="sk">Autonomie</span><span class="sv2" style="color:#aaffcc">${battDuur} uur te gaan</span></div>
+    </div>
+
+    <!-- ZON ONDER tegel — nu onderaan, volle breedte -->
+    <div class="batt-detail" style="width:100%;background:rgba(4,14,44,0.55);text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
+      <div style="font-size:9px;color:rgba(255,180,90,0.85);letter-spacing:1px">ZON ONDER</div>
+      <div style="font-size:14px;font-weight:700;color:#ffb050;display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb050" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 12v4" stroke-width="2"/><path d="M9 15l3 3 3-3" stroke-width="2"/></svg>${zonOnd}</div>
     </div>
   </div>
 
