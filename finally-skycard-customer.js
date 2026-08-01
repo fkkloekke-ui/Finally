@@ -765,6 +765,7 @@ class FinallySkyCard extends HTMLElement {
     const tempBinnen = hass ? s('sensor.ewelink_snzb_02p_temperatuur').toFixed(1) : '--';
     const vocht      = hass ? s('sensor.ewelink_snzb_02p_luchtvochtigheid').toFixed(0) : '--';
     const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
+    const vochtBuiten = _wAttr ? (_wAttr.humidity ?? '--') : '--';
     const windKm     = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
     const _windBear  = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const _windDirs  = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
@@ -1091,7 +1092,7 @@ class FinallySkyCard extends HTMLElement {
       <div class="wrow">
         <div class="wi">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#ff6644"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 019.5 9 2.5 2.5 0 0112 6.5 2.5 2.5 0 0114.5 9 2.5 2.5 0 0112 11.5z"/></svg>
-          <b>${tempBinnen}°C</b> / ${vocht}%
+          <b>${(this._config && this._config.outdoor_climate) ? tempBuiten : tempBinnen}°C</b> / ${(this._config && this._config.outdoor_climate) ? vochtBuiten : vocht}%
         </div>
         <div class="wi">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ffd700" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
