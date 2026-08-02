@@ -717,12 +717,15 @@ class FinallySkyCard extends HTMLElement {
     const acInputLimit = hass ? s('number.gx_device_ac_input_limit').toFixed(0) : '--';
     const battPow    = hass ? s('sensor.gx_device_dc_battery_power') : 0;
     const loadTeken  = (battPow < -10 && gridW < 20) ? '−' : '';  // accu → boot = min teken
-    const battSoc    = hass ? s('sensor.smartshunt_hq2224ru6gc_batterij') : 0;
-    const battV      = hass ? s('sensor.smartshunt_hq2224ru6gc_spanning').toFixed(1) : '--';
+    const socEntity  = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
+    const voltEntity = (this._config && this._config.smartshunt_voltage_entity) || 'sensor.smartshunt_hq2224ru6gc_spanning';
+    const currEntity = (this._config && this._config.smartshunt_current_entity) || 'sensor.smartshunt_hq2224ru6gc_stroom';
+    const battSoc    = hass ? s(socEntity) : 0;
+    const battV      = hass ? s(voltEntity).toFixed(1) : '--';
     const battVGeneric = hass ? s('sensor.gx_device_dc_battery_voltage').toFixed(2) : '--';
     const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
     const windW       = hass ? s(windEntity).toFixed(0) : '--';
-    const battA      = hass ? s('sensor.smartshunt_hq2224ru6gc_stroom').toFixed(1) : '--';
+    const battA      = hass ? s(currEntity).toFixed(1) : '--';
     const battWh     = hass ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--';
     const _soc30wh   = hass ? s('sensor.accu_beschikbaar_wh') * 0.70 : 0;
     const _battPowR  = hass ? s('sensor.gx_device_dc_battery_power') : 0;
@@ -1870,13 +1873,16 @@ class FinallySkyCardMobile extends HTMLElement {
     const loadAlarm  = loadW >= 4500;
     const gridW     = s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1');
     const battPow   = s('sensor.gx_device_dc_battery_power');
-    const battChar  = s('sensor.smartshunt_hq2224ru6gc_stroom') > 0;
+    const socEntity  = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
+    const voltEntity = (this._config && this._config.smartshunt_voltage_entity) || 'sensor.smartshunt_hq2224ru6gc_spanning';
+    const currEntity = (this._config && this._config.smartshunt_current_entity) || 'sensor.smartshunt_hq2224ru6gc_stroom';
+    const battChar  = s(currEntity) > 0;
 
     // ── Accu ──
-    const battSoc   = s('sensor.smartshunt_hq2224ru6gc_batterij');
-    const battV     = s('sensor.smartshunt_hq2224ru6gc_spanning').toFixed(2);
+    const battSoc   = s(socEntity);
+    const battV     = s(voltEntity).toFixed(2);
     const battVGeneric = s('sensor.gx_device_dc_battery_voltage').toFixed(2);
-    const battA     = s('sensor.smartshunt_hq2224ru6gc_stroom').toFixed(1);
+    const battA     = s(currEntity).toFixed(1);
     const battWh    = s('sensor.accu_beschikbaar_wh').toFixed(0);
     const _battPowM  = s('sensor.gx_device_dc_battery_power');
     const _soc30whM  = s('sensor.accu_beschikbaar_wh') * 0.70;
