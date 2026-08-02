@@ -612,7 +612,7 @@ class FinallySkyCard extends HTMLElement {
     return `
       ${zero >= 0 && zero <= h ? `<line x1="2" y1="${zero.toFixed(1)}" x2="${w-2}" y2="${zero.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" stroke-dasharray="3 2"/>` : ''}
       <polyline points="${histPts}" fill="none" stroke="${lineColor}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-      ${fcPts ? `<polyline points="${fcPts}" fill="none" stroke="${lineColor}" stroke-width="1.4" stroke-dasharray="3 2" opacity="0.6" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+      ${fcPts ? `<polyline points="${fcPts}" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.4" stroke-dasharray="3 2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
       <circle cx="${px(hist[hist.length-1].t).toFixed(1)}" cy="${py(cur).toFixed(1)}" r="3" fill="${lineColor}"/>
       <text x="2" y="${h}" fill="rgba(255,255,255,0.3)" font-size="8" font-family="sans-serif">-48u</text>
       <text x="${w-2}" y="${h}" text-anchor="end" fill="rgba(255,255,255,0.3)" font-size="8" font-family="sans-serif">${fc.length ? '+24u' : 'nu'}</text>`;
@@ -1835,7 +1835,7 @@ class FinallySkyCardMobile extends HTMLElement {
       ? [px(hist[hist.length-1].t).toFixed(1) + ',' + py(cur).toFixed(1)].concat(fc.map(d => px(d.t).toFixed(1) + ',' + py(d.v).toFixed(1))).join(' ')
       : '';
     return '<polyline points="' + histPts + '" fill="none" stroke="' + lineColor + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
-         + (fcPts ? '<polyline points="' + fcPts + '" fill="none" stroke="' + lineColor + '" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6" stroke-linejoin="round" stroke-linecap="round"/>' : '')
+         + (fcPts ? '<polyline points="' + fcPts + '" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-dasharray="3 2" stroke-linejoin="round" stroke-linecap="round"/>' : '')
          + '<circle cx="' + px(hist[hist.length-1].t).toFixed(1) + '" cy="' + py(cur).toFixed(1) + '" r="3" fill="' + lineColor + '"/>';
   }
 
