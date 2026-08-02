@@ -162,7 +162,7 @@ class FinallySkyCard extends HTMLElement {
   _buildPopupHTML(id) {
     const titles = {
       energie: '⚡ ENERGIE — REAL-TIME', solar: '☀️ ZONNEPANELEN',
-      accu: '🔋 ACCUBANK — 628Ah LiFePO4', generator: '⚙️ GENERATOR',
+      accu: `🔋 ACCUBANK — ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`, generator: '⚙️ GENERATOR',
       klimaat: '🌡️ KLIMAAT AAN BOORD', verlichting: '💡 VERLICHTING', systeem: '🖥️ SYSTEEM'
     };
     const h = (s) => `<div class="sb-title"><span>${titles[id]||id}</span><span class="sb-close">✕</span></div>` + s;
@@ -788,6 +788,9 @@ class FinallySkyCard extends HTMLElement {
     const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
     const vochtBuiten = _wAttr ? (_wAttr.humidity ?? '--') : '--';
     const windKm     = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
+    const windUnitMs = (this._config && this._config.wind_unit === 'ms');
+    const windDisplay = windKm === '--' ? '--' : (windUnitMs ? (parseFloat(windKm) / 3.6).toFixed(1) : windKm);
+    const windUnitLbl = windUnitMs ? 'm/s' : 'km/h';
     const _windBear  = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const _windDirs  = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
     const windDir    = _wAttr ? _windDirs[Math.round(_windBear / 22.5) % 16] : '--';
@@ -1122,7 +1125,7 @@ class FinallySkyCard extends HTMLElement {
         </div>
         <div class="wi">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="#88ccff"><path d="M4 12l1.41 1.41L11 7.83V20h2V7.83l5.58 5.59L20 12l-8-8-8 8z"/></svg>
-          ${windKm} km/h ${windDir} (${windBft} Bft)
+          ${windDisplay} ${windUnitLbl} ${windDir} (${windBft} Bft)
         </div>
       </div>
       ${knmiCode !== 'Groen' && knmiCode !== '--' ? '<div id="knmi-btn" data-code="'+knmiCode+'" style="cursor:pointer;margin-top:6px;display:inline-block;padding:4px 12px;background:'+(knmiCode==='Rood'?'rgba(80,10,10,0.6)':knmiCode==='Oranje'?'rgba(80,40,0,0.6)':'rgba(60,50,0,0.6)')+';border:1px solid '+(knmiCode==='Rood'?'rgba(255,80,80,0.6)':knmiCode==='Oranje'?'rgba(255,140,0,0.6)':'rgba(255,220,0,0.6)')+';border-radius:8px;font-size:12px;font-weight:700;color:'+(knmiCode==='Rood'?'#ff6666':knmiCode==='Oranje'?'#ffaa44':'#ffee44')+'">⚠ KNMI Code '+knmiCode+'</div>' : ''}
@@ -1953,6 +1956,9 @@ class FinallySkyCardMobile extends HTMLElement {
     const vocht      = s('sensor.ewelink_snzb_02p_luchtvochtigheid').toFixed(0);
     const windKm     = windKmM;
     const windDir    = windDirM;
+    const windUnitMs = (this._config && this._config.wind_unit === 'ms');
+    const windDisplay = windKm === '--' ? '--' : (windUnitMs ? (parseFloat(windKm) / 3.6).toFixed(1) : windKm);
+    const windUnitLbl = windUnitMs ? 'm/s' : 'km/h';
     const windBft    = _wAttr ? (parseFloat(windKmM) < 1 ? 0 : parseFloat(windKmM) < 6 ? 1 : parseFloat(windKmM) < 12 ? 2 : parseFloat(windKmM) < 20 ? 3 : parseFloat(windKmM) < 29 ? 4 : parseFloat(windKmM) < 39 ? 5 : parseFloat(windKmM) < 50 ? 6 : parseFloat(windKmM) < 62 ? 7 : 8) : '--';
     const baro       = s('sensor.barometer_hasselt').toFixed(0);
     const water      = s('sensor.hasselt_zwarte_water_waterhoogte').toFixed(0);
@@ -2320,7 +2326,7 @@ class FinallySkyCardMobile extends HTMLElement {
       </div>
       <div class="hero-bottom">
         <div class="hero-soc">
-          <div class="soc-lbl">TOTAAL SOC · 628Ah LiFePO4</div>
+          <div class="soc-lbl">TOTAAL SOC · ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}</div>
           <div class="soc-getal" style="color:${socColor}">${Math.round(battSoc)}%</div>
           <div class="soc-bar">
             <div class="soc-bar-fill" style="width:${battSoc}%;background:${socColor}"></div>
@@ -2534,7 +2540,7 @@ ${(this._config && this._config.show_generator) ? `
       </div>
     </div>
     <div class="card">
-      <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windKm} km/h · ${windDir} · ${windBft} Bft</span></div>
+      <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windDisplay} ${windUnitLbl} · ${windDir} · ${windBft} Bft</span></div>
       <div class="row">
         <span class="row-lbl">Waterstand Hasselt</span>
         <div style="display:flex;align-items:center;gap:8px">
@@ -2615,7 +2621,7 @@ ${(this._config && this._config.show_kabola) ? `
           </svg>
         </div>
         <div style="flex:1">
-          <div style="font-size:18px;font-weight:700;color:#88ccff">${windKm} km/h</div>
+          <div style="font-size:18px;font-weight:700;color:#88ccff">${windDisplay} ${windUnitLbl}</div>
           <div style="font-size:12px;color:rgba(136,204,255,0.7)">${windKompas} (${Math.round(windDeg)}°) · ${windBft} Bft</div>
         </div>
         <div style="text-align:right">
