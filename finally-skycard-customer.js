@@ -394,21 +394,35 @@ class FinallySkyCard extends HTMLElement {
     const C = (elId, clr) => { const el = container.querySelector('#'+elId); if(el) el.style.color = clr; };
     const W = (elId, w, max) => { const el = container.querySelector('#'+elId); if(el) el.style.width = Math.min(w/max*100,100).toFixed(1)+'%'; };
 
+    // ── MPPT / Quattro (configureerbaar, valt terug op Eriks eigen serienummers) ──
+    const mpptStateEntity = (this._config && this._config.mppt_state_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state';
+    const mpptYieldYesterdayEntity = (this._config && this._config.mppt_yield_yesterday_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday';
+    const mpptMaxPowerTodayEntity = (this._config && this._config.mppt_max_power_today_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_max_power_today';
+    const quattroDcVoltageEntity = (this._config && this._config.quattro_dc_voltage_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_dc_voltage';
+    const quattroHighTempAlarmEntity = (this._config && this._config.quattro_high_temp_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_high_temperature_alarm';
+    const quattroInputPowerL1Entity = (this._config && this._config.quattro_input_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_input_power_l1';
+    const quattroInputVoltageL1Entity = (this._config && this._config.quattro_input_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_input_voltage_l1';
+    const quattroLowBatteryAlarmEntity = (this._config && this._config.quattro_low_battery_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_low_battery_alarm';
+    const quattroOutputFrequencyL1Entity = (this._config && this._config.quattro_output_frequency_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1';
+    const quattroOutputPowerL1Entity = (this._config && this._config.quattro_output_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_power_l1';
+    const quattroOutputVoltageL1Entity = (this._config && this._config.quattro_output_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1';
+    const quattroOverloadAlarmEntity = (this._config && this._config.quattro_overload_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_overload_alarm';
+
     if (id === 'energie') {
       const lW=_s('sensor.gx_device_consumption_power_l1'), pW=_s('sensor.gx_device_pv_power'),
-            gW=_s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1'),
+            gW=_s(quattroInputPowerL1Entity),
             bW=_s('sensor.gx_device_dc_battery_power'), bA=_s('sensor.smartshunt_hq2224ru6gc_stroom'),
-            acV=_s('sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1').toFixed(0),
-            acH=_s('sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1').toFixed(1),
-            dcV=_s('sensor.quattro_24_5000_120_2x100_id_276_dc_voltage').toFixed(1),
-            dcW=_s('sensor.quattro_24_5000_120_2x100_id_276_output_power_l1').toFixed(0);
+            acV=_s(quattroOutputVoltageL1Entity).toFixed(0),
+            acH=_s(quattroOutputFrequencyL1Entity).toFixed(1),
+            dcV=_s(quattroDcVoltageEntity).toFixed(1),
+            dcW=_s(quattroOutputPowerL1Entity).toFixed(0);
       T('ep-load',lW+' W'); W('ep-load-bar',lW,5000); T('ep-pv',pW+' W'); W('ep-pv-bar',pW,1800);
       T('ep-grid',gW+' W'); W('ep-grid-bar',gW,5000);
       T('ep-batt',(bA>0?'▲ +':'▼ ')+Math.abs(bW).toFixed(0)+' W'); T('ep-batt-sub',bA>0?'Laden':'Ontladen');
       C('ep-batt',bA>0?'#00ff88':'#ff9900');
       T('ep-acv',acV+' V'); T('ep-ach',acH+' Hz'); T('ep-state',_st('sensor.gx_device_system_state')); T('ep-state-sub',dcV+' V DC');
       T('ep-pvd',_s('sensor.solar_yield_vandaag').toFixed(2)+' kWh');
-      T('ep-pvg',_s('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday').toFixed(2)+' kWh');
+      T('ep-pvg',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
       T('ep-pvm',_s('sensor.solar_yield_maand').toFixed(1)+' kWh');
       T('ep-gd',_s('sensor.walstroom_dagverbruik').toFixed(2)+' kWh');
       T('ep-ld',_s('sensor.gx_device_ac_uitgang_dagverbruik').toFixed(2)+' kWh');
@@ -429,9 +443,9 @@ class FinallySkyCard extends HTMLElement {
     }
     else if (id === 'solar') {
       const pW=_s('sensor.gx_device_pv_power'), pA=_s('sensor.gx_device_pv_current').toFixed(1);
-      T('sp-nu',pW+' W'); W('sp-nu-bar',pW,1800); T('sp-staat',_st('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state')); T('sp-a',pA+' A');
+      T('sp-nu',pW+' W'); W('sp-nu-bar',pW,1800); T('sp-staat',_st(mpptStateEntity)); T('sp-a',pA+' A');
       T('sp-d',_s('sensor.solar_yield_vandaag').toFixed(2)+' kWh');
-      T('sp-g',_s('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday').toFixed(2)+' kWh');
+      T('sp-g',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
       T('sp-m',_s('sensor.solar_yield_maand').toFixed(1)+' kWh');
       T('sp-elev',parseFloat(_at('sun.sun','elevation')).toFixed(1)+'°');
       T('sp-azim',parseFloat(_at('sun.sun','azimuth')).toFixed(0)+'°');
@@ -483,12 +497,12 @@ class FinallySkyCard extends HTMLElement {
       const gs=_st('sensor.generator_start_stop_run_state'), aan=gs==='running';
       T('gp-staat',aan?'● RUNNING':'○ GESTOPT'); C('gp-staat',aan?'#00ff88':'rgba(255,255,255,0.4)');
       T('gp-sub',gs);
-      T('gp-acv',_s('sensor.quattro_24_5000_120_2x100_id_276_input_voltage_l1').toFixed(0)+' V');
-      T('gp-w',_s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1').toFixed(0)+' W');
-      T('gp-hz',_s('sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1').toFixed(1)+' Hz');
-      [['gp-temp','sensor.quattro_24_5000_120_2x100_id_276_high_temperature_alarm'],
-       ['gp-over','sensor.quattro_24_5000_120_2x100_id_276_overload_alarm'],
-       ['gp-batt','sensor.quattro_24_5000_120_2x100_id_276_low_battery_alarm']].forEach(([el,s])=>{
+      T('gp-acv',_s(quattroInputVoltageL1Entity).toFixed(0)+' V');
+      T('gp-w',_s(quattroInputPowerL1Entity).toFixed(0)+' W');
+      T('gp-hz',_s(quattroOutputFrequencyL1Entity).toFixed(1)+' Hz');
+      [['gp-temp',quattroHighTempAlarmEntity],
+       ['gp-over',quattroOverloadAlarmEntity],
+       ['gp-batt',quattroLowBatteryAlarmEntity]].forEach(([el,s])=>{
         const v=_st(s); T(el,ok.includes(v)?'✓ OK':'⚠ ALARM'); C(el,ok.includes(v)?'#00ff88':'#ff4444');
       });
     }
@@ -500,12 +514,12 @@ class FinallySkyCard extends HTMLElement {
     else if (id === 'systeem') {
       T('syp-fw',_st('sensor.gx_device_installed_version'));
       T('syp-state',_st('sensor.gx_device_system_state'));
-      T('syp-mppt',_st('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state'));
+      T('syp-mppt',_st(mpptStateEntity));
       T('syp-gen',_st('sensor.generator_start_stop_run_state'));
-      T('syp-acv',_s('sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1').toFixed(0)+' V');
-      T('syp-ach',_s('sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1').toFixed(1)+' Hz');
-      T('syp-dcv',_s('sensor.quattro_24_5000_120_2x100_id_276_dc_voltage').toFixed(1)+' V');
-      T('syp-w',_s('sensor.quattro_24_5000_120_2x100_id_276_output_power_l1').toFixed(0)+' W');
+      T('syp-acv',_s(quattroOutputVoltageL1Entity).toFixed(0)+' V');
+      T('syp-ach',_s(quattroOutputFrequencyL1Entity).toFixed(1)+' Hz');
+      T('syp-dcv',_s(quattroDcVoltageEntity).toFixed(1)+' V');
+      T('syp-w',_s(quattroOutputPowerL1Entity).toFixed(0)+' W');
     }
   }
 
@@ -703,9 +717,23 @@ class FinallySkyCard extends HTMLElement {
     const st = this._st.bind(this);
     const hass = this._hass;
 
+    // ── MPPT / Quattro (configureerbaar, valt terug op Eriks eigen serienummers) ──
+    const mpptStateEntity = (this._config && this._config.mppt_state_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state';
+    const mpptYieldYesterdayEntity = (this._config && this._config.mppt_yield_yesterday_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday';
+    const mpptMaxPowerTodayEntity = (this._config && this._config.mppt_max_power_today_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_max_power_today';
+    const quattroDcVoltageEntity = (this._config && this._config.quattro_dc_voltage_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_dc_voltage';
+    const quattroHighTempAlarmEntity = (this._config && this._config.quattro_high_temp_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_high_temperature_alarm';
+    const quattroInputPowerL1Entity = (this._config && this._config.quattro_input_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_input_power_l1';
+    const quattroInputVoltageL1Entity = (this._config && this._config.quattro_input_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_input_voltage_l1';
+    const quattroLowBatteryAlarmEntity = (this._config && this._config.quattro_low_battery_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_low_battery_alarm';
+    const quattroOutputFrequencyL1Entity = (this._config && this._config.quattro_output_frequency_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1';
+    const quattroOutputPowerL1Entity = (this._config && this._config.quattro_output_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_power_l1';
+    const quattroOutputVoltageL1Entity = (this._config && this._config.quattro_output_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1';
+    const quattroOverloadAlarmEntity = (this._config && this._config.quattro_overload_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_overload_alarm';
+
     // ── Energie ──
     const pvW        = hass ? s('sensor.gx_device_pv_power') : 0;
-    const pvMaxVandaag = hass ? Math.max(s('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_max_power_today'), pvW, 100) : 1800;
+    const pvMaxVandaag = hass ? Math.max(s(mpptMaxPowerTodayEntity), pvW, 100) : 1800;
     const pvMax      = pvMaxVandaag;
     const pvPct      = Math.min((pvW / pvMax) * 100, 100);
     const loadW      = hass ? s('sensor.gx_device_consumption_power_l1') : 0;
@@ -713,7 +741,7 @@ class FinallySkyCard extends HTMLElement {
     const loadPct    = Math.min((loadW / loadMax) * 100, 100);
     const loadKleur  = loadW >= 4500 ? '#ff2222' : loadW >= 3000 ? '#ff6600' : '#ff8844';
     const loadAlarm  = loadW >= 4500;
-    const gridW      = hass ? s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1') : 0;
+    const gridW      = hass ? s(quattroInputPowerL1Entity) : 0;
     const acInputLimit = hass ? s('number.gx_device_ac_input_limit').toFixed(0) : '--';
     const battPow    = hass ? s('sensor.gx_device_dc_battery_power') : 0;
     const loadTeken  = (battPow < -10 && gridW < 20) ? '−' : '';  // accu → boot = min teken
@@ -733,7 +761,7 @@ class FinallySkyCard extends HTMLElement {
     const battDuur   = _battPowR < -20 ? (_soc30wh / _discharge).toFixed(1) : (hass ? s('sensor.verwachte_accuduur').toFixed(1) : '--');
     const pvVandaag  = hass ? s('sensor.solar_yield_vandaag').toFixed(2) : '--';
     const pvMaand    = hass ? s('sensor.solar_yield_maand').toFixed(1) : '--';
-    const pvGisteren = hass ? s('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday').toFixed(2) : '--';
+    const pvGisteren = hass ? s(mpptYieldYesterdayEntity).toFixed(2) : '--';
     const battChar   = parseFloat(battA) > 0;
 
     // ── BMS ──
@@ -756,15 +784,15 @@ class FinallySkyCard extends HTMLElement {
 
     // ── Systeem ──
     const sysState  = hass ? st('sensor.gx_device_system_state') : '--';
-    const mpptState = hass ? st('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state') : '--';
-    const acV       = hass ? s('sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1').toFixed(0) : '--';
-    const acHz      = hass ? s('sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1').toFixed(1) : '--';
-    const acInV     = hass ? s('sensor.quattro_24_5000_120_2x100_id_276_input_voltage_l1').toFixed(0) : '--';
-    const acOutW    = hass ? s('sensor.quattro_24_5000_120_2x100_id_276_output_power_l1').toFixed(0) : '--';
-    const dcV       = hass ? s('sensor.quattro_24_5000_120_2x100_id_276_dc_voltage').toFixed(1) : '--';
-    const alarmTemp = hass ? st('sensor.quattro_24_5000_120_2x100_id_276_high_temperature_alarm') : 'ok';
-    const alarmOver = hass ? st('sensor.quattro_24_5000_120_2x100_id_276_overload_alarm') : 'ok';
-    const alarmBatt = hass ? st('sensor.quattro_24_5000_120_2x100_id_276_low_battery_alarm') : 'ok';
+    const mpptState = hass ? st(mpptStateEntity) : '--';
+    const acV       = hass ? s(quattroOutputVoltageL1Entity).toFixed(0) : '--';
+    const acHz      = hass ? s(quattroOutputFrequencyL1Entity).toFixed(1) : '--';
+    const acInV     = hass ? s(quattroInputVoltageL1Entity).toFixed(0) : '--';
+    const acOutW    = hass ? s(quattroOutputPowerL1Entity).toFixed(0) : '--';
+    const dcV       = hass ? s(quattroDcVoltageEntity).toFixed(1) : '--';
+    const alarmTemp = hass ? st(quattroHighTempAlarmEntity) : 'ok';
+    const alarmOver = hass ? st(quattroOverloadAlarmEntity) : 'ok';
+    const alarmBatt = hass ? st(quattroLowBatteryAlarmEntity) : 'ok';
     const sc        = ['bulk','absorption','float'].includes(sysState) ? '#00ff88' : sysState === 'inverting' ? '#00cc66' : '#00aaff';
     const sl        = sysState === 'inverting' ? 'OMVORMEN' : sysState === 'bulk' ? 'BULK LADEN' :
                       sysState === 'absorption' ? 'ABSORPTIE' : sysState === 'float' ? 'FLOAT' :
@@ -1869,12 +1897,26 @@ class FinallySkyCardMobile extends HTMLElement {
     const s  = this._s.bind(this);
     const st = this._st.bind(this);
 
+    // ── MPPT / Quattro (configureerbaar, valt terug op Eriks eigen serienummers) ──
+    const mpptStateEntity = (this._config && this._config.mppt_state_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state';
+    const mpptYieldYesterdayEntity = (this._config && this._config.mppt_yield_yesterday_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday';
+    const mpptMaxPowerTodayEntity = (this._config && this._config.mppt_max_power_today_entity) || 'sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_max_power_today';
+    const quattroDcVoltageEntity = (this._config && this._config.quattro_dc_voltage_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_dc_voltage';
+    const quattroHighTempAlarmEntity = (this._config && this._config.quattro_high_temp_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_high_temperature_alarm';
+    const quattroInputPowerL1Entity = (this._config && this._config.quattro_input_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_input_power_l1';
+    const quattroInputVoltageL1Entity = (this._config && this._config.quattro_input_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_input_voltage_l1';
+    const quattroLowBatteryAlarmEntity = (this._config && this._config.quattro_low_battery_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_low_battery_alarm';
+    const quattroOutputFrequencyL1Entity = (this._config && this._config.quattro_output_frequency_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1';
+    const quattroOutputPowerL1Entity = (this._config && this._config.quattro_output_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_power_l1';
+    const quattroOutputVoltageL1Entity = (this._config && this._config.quattro_output_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1';
+    const quattroOverloadAlarmEntity = (this._config && this._config.quattro_overload_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_overload_alarm';
+
     // ── Energie ──
     const pvW       = s('sensor.gx_device_pv_power');
     const loadW     = s('sensor.gx_device_consumption_power_l1');
     const loadKleur  = loadW >= 4500 ? '#ff2222' : loadW >= 3000 ? '#ff6600' : loadW > 1500 ? '#ff4444' : loadW > 800 ? '#ffa500' : '#00cc66';
     const loadAlarm  = loadW >= 4500;
-    const gridW     = s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1');
+    const gridW     = s(quattroInputPowerL1Entity);
     const battPow   = s('sensor.gx_device_dc_battery_power');
     const socEntity  = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
     const voltEntity = (this._config && this._config.smartshunt_voltage_entity) || 'sensor.smartshunt_hq2224ru6gc_spanning';
@@ -1911,11 +1953,11 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── PV ──
     const pvVandaag  = s('sensor.solar_yield_vandaag').toFixed(2);
-    const pvGisteren = s('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_yield_yesterday').toFixed(2);
+    const pvGisteren = s(mpptYieldYesterdayEntity).toFixed(2);
     const pvMaand    = s('sensor.solar_yield_maand').toFixed(1);
     const pvMax      = 1800;
     const pvPct      = Math.min(pvW / pvMax * 100, 100);
-    const mpptState  = st('sensor.smartsolar_mppt_ve_can_150_85_rev2_id_279_state');
+    const mpptState  = st(mpptStateEntity);
     const pvBesparing = (parseFloat(pvMaand) * 0.50).toFixed(2);
     const walDag     = s('sensor.walstroom_dagverbruik').toFixed(2);
     const walMaand   = s('sensor.walstroom_verbruik_maand').toFixed(2);
@@ -1925,16 +1967,16 @@ class FinallySkyCardMobile extends HTMLElement {
     const acInputLimit = s('number.gx_device_ac_input_limit').toFixed(0);
 
     // ── Quattro ──
-    const acV     = s('sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1').toFixed(0);
-    const acHz    = s('sensor.quattro_24_5000_120_2x100_id_276_output_frequency_l1').toFixed(1);
-    const acOutW  = s('sensor.quattro_24_5000_120_2x100_id_276_output_power_l1').toFixed(0);
-    const dcV     = s('sensor.quattro_24_5000_120_2x100_id_276_dc_voltage').toFixed(1);
-    const acInV   = s('sensor.quattro_24_5000_120_2x100_id_276_input_voltage_l1').toFixed(0);
+    const acV     = s(quattroOutputVoltageL1Entity).toFixed(0);
+    const acHz    = s(quattroOutputFrequencyL1Entity).toFixed(1);
+    const acOutW  = s(quattroOutputPowerL1Entity).toFixed(0);
+    const dcV     = s(quattroDcVoltageEntity).toFixed(1);
+    const acInV   = s(quattroInputVoltageL1Entity).toFixed(0);
     const sysState = st('sensor.gx_device_system_state');
     const ok = ['ok','Ok','0','','false','no alarm','No alarm','No Alarm','no_alarm'];
-    const alarmTemp = st('sensor.quattro_24_5000_120_2x100_id_276_high_temperature_alarm');
-    const alarmOver = st('sensor.quattro_24_5000_120_2x100_id_276_overload_alarm');
-    const alarmBatt = st('sensor.quattro_24_5000_120_2x100_id_276_low_battery_alarm');
+    const alarmTemp = st(quattroHighTempAlarmEntity);
+    const alarmOver = st(quattroOverloadAlarmEntity);
+    const alarmBatt = st(quattroLowBatteryAlarmEntity);
     const alarmsOk  = ok.includes(alarmTemp) && ok.includes(alarmOver) && ok.includes(alarmBatt);
 
     // Systeemmodus kleur
@@ -1979,7 +2021,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const kabolaActief       = kabolaState ? (kabolaState.state !== 'off' && kabolaState.state !== 'unavailable') : false;
     const kabolaDoelTemp     = kabolaState ? (kabolaState.attributes.temperature ?? '--') : '--';
     const kabolaHuidigeTemp  = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
-    const gridActive  = s('sensor.quattro_24_5000_120_2x100_id_276_input_power_l1') > 20;
+    const gridActive  = s(quattroInputPowerL1Entity) > 20;
     const gridSpanning = parseFloat(acInV) > 100;
     const walSocketAan = st('switch.walstroom_socket_1') === 'on';
     const walOverride  = st('input_boolean.walstroom_override') === 'on';
