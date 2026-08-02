@@ -1,8 +1,17 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
+   Versie: 3.2.0
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.0 — MPPT (SmartSolar) en Quattro-alarmen/meetwaarden zijn nu
+   configureerbaar via this._config (mppt_state_entity, mppt_yield_yesterday_entity,
+   mppt_max_power_today_entity, quattro_dc_voltage_entity, quattro_high_temp_alarm_entity,
+   quattro_input_power_l1_entity, quattro_input_voltage_l1_entity,
+   quattro_low_battery_alarm_entity, quattro_output_frequency_l1_entity,
+   quattro_output_power_l1_entity, quattro_output_voltage_l1_entity,
+   quattro_overload_alarm_entity), met fallback op Eriks eigen serienummers.
    ============================================================ */
 
 class FinallySkyCard extends HTMLElement {
@@ -3615,6 +3624,13 @@ class FinallyWizard extends HTMLElement {
         .replace(/_yield_today$/, '');
       s.serials.mppt = serial;
       s.entities.pvPower = mpptE;
+      // Extra velden voor mppt_*_entity config-overrides — alleen zetten als de entity ook echt bestaat
+      const mpptStateE = 'sensor.' + serial + '_state';
+      const mpptYieldYesterdayE = 'sensor.' + serial + '_yield_yesterday';
+      const mpptMaxPowerTodayE = 'sensor.' + serial + '_max_power_today';
+      if (allKeys.includes(mpptStateE)) s.entities.mpptState = mpptStateE;
+      if (allKeys.includes(mpptYieldYesterdayE)) s.entities.mpptYieldYesterday = mpptYieldYesterdayE;
+      if (allKeys.includes(mpptMaxPowerTodayE)) s.entities.mpptMaxPowerToday = mpptMaxPowerTodayE;
       results.push({ key:'mppt', found: true, name: 'SmartSolar MPPT', id: serial });
     } else {
       results.push({ key:'mppt', found: false, name: 'SmartSolar MPPT', id: s.manualSerials.mppt || '' });
@@ -3628,6 +3644,20 @@ class FinallyWizard extends HTMLElement {
       s.serials.quattro = serial;
       s.entities.acInV = quattroE;
       s.entities.acInW = 'sensor.' + serial + '_input_power_l1';
+      // Extra velden voor quattro_*_entity config-overrides — alleen zetten als de entity ook echt bestaat
+      const quattroFields = {
+        quattroDcVoltage: '_dc_voltage',
+        quattroHighTempAlarm: '_high_temperature_alarm',
+        quattroLowBatteryAlarm: '_low_battery_alarm',
+        quattroOverloadAlarm: '_overload_alarm',
+        quattroOutputVoltageL1: '_output_voltage_l1',
+        quattroOutputFrequencyL1: '_output_frequency_l1',
+        quattroOutputPowerL1: '_output_power_l1',
+      };
+      Object.entries(quattroFields).forEach(([key, suffix]) => {
+        const e = 'sensor.' + serial + suffix;
+        if (allKeys.includes(e)) s.entities[key] = e;
+      });
       results.push({ key:'quattro', found: true, name: 'Quattro / Multiplus', id: serial });
     } else {
       results.push({ key:'quattro', found: false, name: 'Quattro / Multiplus', id: s.manualSerials.quattro || '' });
@@ -3712,6 +3742,29 @@ class FinallyWizard extends HTMLElement {
       '</div>';
   }
 
+  _buildEntityConfigYaml() {
+    const e = this._state.entities;
+    const map = [
+      ['smartshunt_soc_entity', e.batterij],
+      ['smartshunt_voltage_entity', e.spanning],
+      ['smartshunt_current_entity', e.stroom],
+      ['mppt_state_entity', e.mpptState],
+      ['mppt_yield_yesterday_entity', e.mpptYieldYesterday],
+      ['mppt_max_power_today_entity', e.mpptMaxPowerToday],
+      ['quattro_dc_voltage_entity', e.quattroDcVoltage],
+      ['quattro_high_temp_alarm_entity', e.quattroHighTempAlarm],
+      ['quattro_input_power_l1_entity', e.acInW],
+      ['quattro_input_voltage_l1_entity', e.acInV],
+      ['quattro_low_battery_alarm_entity', e.quattroLowBatteryAlarm],
+      ['quattro_output_frequency_l1_entity', e.quattroOutputFrequencyL1],
+      ['quattro_output_power_l1_entity', e.quattroOutputPowerL1],
+      ['quattro_output_voltage_l1_entity', e.quattroOutputVoltageL1],
+      ['quattro_overload_alarm_entity', e.quattroOverloadAlarm],
+    ];
+    const lines = map.filter(([, val]) => !!val).map(([key, val]) => key + ': ' + val);
+    return lines.join('\n');
+  }
+
   _renderStep5(c) {
     const s = this._state;
     const status = (val) => val ? 'ok' : 'missing';
@@ -3732,6 +3785,14 @@ class FinallyWizard extends HTMLElement {
       '<div class="fr"><span class="fk">Foto</span><span class="fv ' + (s.fotoDataUrl ? 'ok' : 'warn') + '">' + (s.fotoDataUrl ? '&#10003; geüpload' : '— geen foto') + '</span></div>' +
       '</div>' +
       '<div class="msg ok" style="margin-top:12px" id="save-msg">Klaar om op te slaan.</div>' +
+      (this._buildEntityConfigYaml()
+        ? '<div style="margin-top:14px">' +
+          '<p class="sub" style="margin-bottom:6px">Plak deze regels in de <code>this._config</code> van je dashboard-kaart (onder de bestaande instellingen). Dit koppelt de kaart aan de zojuist gedetecteerde SmartShunt/MPPT/Quattro op dit schip in plaats van aan Eriks eigen serienummers:</p>' +
+          '<textarea id="entity-config-yaml" readonly style="width:100%;min-height:180px;font-family:monospace;font-size:11px;background:rgba(0,0,0,0.3);color:#aaffcc;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px;box-sizing:border-box" onclick="this.select()">' + this._buildEntityConfigYaml() + '</textarea>' +
+          '<button class="btn btn-s" style="margin-top:6px" data-action="copy-config">&#128203; Kopieer naar klembord</button>' +
+          '<span id="copy-msg" style="margin-left:8px;font-size:11px;color:#aaffcc"></span>' +
+          '</div>'
+        : '') +
       '<div class="btn-row">' +
       '<button class="btn btn-s" data-action="step" data-n="4">‹ Terug</button>' +
       '<button class="btn btn-p" data-action="save">&#128190; Opslaan & toepassen</button>' +
@@ -3769,6 +3830,18 @@ class FinallyWizard extends HTMLElement {
       this._fetchVrmDevices();
     } else if (act === 'save') {
       this._saveConfig();
+    } else if (act === 'copy-config') {
+      const ta = this.shadowRoot.getElementById('entity-config-yaml');
+      const msg = this.shadowRoot.getElementById('copy-msg');
+      if (!ta) return;
+      const done = () => { if (msg) msg.textContent = '&#10003; gekopieerd!'.replace('&#10003;', '✓'); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(ta.value).then(done).catch(() => {
+          ta.select(); document.execCommand('copy'); done();
+        });
+      } else {
+        ta.select(); document.execCommand('copy'); done();
+      }
     }
   }
 
