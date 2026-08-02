@@ -589,26 +589,33 @@ class FinallySkyCard extends HTMLElement {
     if (!this._waterHistory || this._waterHistory.length < 2) {
       return `<text x="${w/2}" y="${h/2}" text-anchor="middle" fill="rgba(255,255,255,0.3)" font-size="10" font-family="sans-serif">laden...</text>`;
     }
-    const data = this._waterHistory;
-    const vals = data.map(d => d.v);
-    const times = data.map(d => d.t);
+    const hist = this._waterHistory;
+    const fc   = (this._waterForecast && this._waterForecast.length) ? this._waterForecast : [];
+    const all  = hist.concat(fc);
+    const vals = all.map(d => d.v);
+    const times = all.map(d => d.t);
     const minV = Math.min(...vals) - 1;
     const maxV = Math.max(...vals) + 1;
     const minT = Math.min(...times);
     const maxT = Math.max(...times);
     const rng = maxV - minV || 1;
-    const px = t => ((t - minT) / (maxT - minT)) * (w - 4) + 2;
+    const px = t => ((t - minT) / (maxT - minT || 1)) * (w - 4) + 2;
     const py = v => h - 4 - ((v - minV) / rng) * (h - 8);
-    const pts = data.map(d => `${px(d.t).toFixed(1)},${py(d.v).toFixed(1)}`).join(' ');
-    const cur = vals[vals.length - 1];
+    const histPts = hist.map(d => `${px(d.t).toFixed(1)},${py(d.v).toFixed(1)}`).join(' ');
+    const cur = hist[hist.length - 1].v;
     const zero = py(0);
     const lineColor = cur > 0 ? '#00aaff' : cur > -20 ? '#ffa500' : '#ff4444';
+    // Prognoselijn: begint bij het laatste echte meetpunt, loopt door in stippellijn
+    const fcPts = fc.length
+      ? [`${px(hist[hist.length-1].t).toFixed(1)},${py(cur).toFixed(1)}`].concat(fc.map(d => `${px(d.t).toFixed(1)},${py(d.v).toFixed(1)}`)).join(' ')
+      : '';
     return `
       ${zero >= 0 && zero <= h ? `<line x1="2" y1="${zero.toFixed(1)}" x2="${w-2}" y2="${zero.toFixed(1)}" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" stroke-dasharray="3 2"/>` : ''}
-      <polyline points="${pts}" fill="none" stroke="${lineColor}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
-      <circle cx="${px(times[times.length-1]).toFixed(1)}" cy="${py(cur).toFixed(1)}" r="3" fill="${lineColor}"/>
+      <polyline points="${histPts}" fill="none" stroke="${lineColor}" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/>
+      ${fcPts ? `<polyline points="${fcPts}" fill="none" stroke="${lineColor}" stroke-width="1.4" stroke-dasharray="3 2" opacity="0.6" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+      <circle cx="${px(hist[hist.length-1].t).toFixed(1)}" cy="${py(cur).toFixed(1)}" r="3" fill="${lineColor}"/>
       <text x="2" y="${h}" fill="rgba(255,255,255,0.3)" font-size="8" font-family="sans-serif">-48u</text>
-      <text x="${w-2}" y="${h}" text-anchor="end" fill="rgba(255,255,255,0.3)" font-size="8" font-family="sans-serif">nu</text>`;
+      <text x="${w-2}" y="${h}" text-anchor="end" fill="rgba(255,255,255,0.3)" font-size="8" font-family="sans-serif">${fc.length ? '+24u' : 'nu'}</text>`;
   }
 
   _weatherIcon(condition, size=32) {
@@ -1774,6 +1781,7 @@ class FinallySkyCardMobile extends HTMLElement {
       this._lastHistoryLoad = now;
       this._historyLoaded = true;
       this._loadWaterHistory();
+      this._loadWaterForecast();
     }
   }
 
@@ -1795,21 +1803,40 @@ class FinallySkyCardMobile extends HTMLElement {
     } catch(e) { console.warn('Finally Mobile: waterhistorie laden mislukt', e); }
   }
 
+  _loadWaterForecast() {
+    if (!this._hass) return;
+    try {
+      const fc = this._hass.states['sensor.hasselt_zwarte_water_waterhoogte_verwacht']?.attributes?.Forecast;
+      if (Array.isArray(fc) && fc.length) {
+        this._waterForecast = fc
+          .map(p => ({ t: new Date(p.Time).getTime(), v: parseFloat(p.Value) }))
+          .filter(p => !isNaN(p.v) && !isNaN(p.t));
+        this._render();
+      }
+    } catch(e) { console.warn('Finally Mobile: waterprognose laden mislukt', e); }
+  }
+
   _waterSparkline(w, h) {
     if (!this._waterHistory || this._waterHistory.length < 2) return '';
-    const data = this._waterHistory;
-    const vals = data.map(d => d.v);
-    const times = data.map(d => d.t);
+    const hist = this._waterHistory;
+    const fc   = (this._waterForecast && this._waterForecast.length) ? this._waterForecast : [];
+    const all  = hist.concat(fc);
+    const vals = all.map(d => d.v);
+    const times = all.map(d => d.t);
     const minV = Math.min(...vals) - 1, maxV = Math.max(...vals) + 1;
     const minT = Math.min(...times), maxT = Math.max(...times);
     const rng = maxV - minV || 1;
-    const px = t => ((t - minT) / (maxT - minT)) * (w - 4) + 2;
+    const px = t => ((t - minT) / (maxT - minT || 1)) * (w - 4) + 2;
     const py = v => h - 4 - ((v - minV) / rng) * (h - 8);
-    const pts = data.map(d => px(d.t).toFixed(1) + ',' + py(d.v).toFixed(1)).join(' ');
-    const cur = vals[vals.length - 1];
+    const histPts = hist.map(d => px(d.t).toFixed(1) + ',' + py(d.v).toFixed(1)).join(' ');
+    const cur = hist[hist.length - 1].v;
     const lineColor = cur > 0 ? '#00aaff' : cur > -20 ? '#ffa500' : '#ff4444';
-    return '<polyline points="' + pts + '" fill="none" stroke="' + lineColor + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
-         + '<circle cx="' + px(times[times.length-1]).toFixed(1) + '" cy="' + py(cur).toFixed(1) + '" r="3" fill="' + lineColor + '"/>';
+    const fcPts = fc.length
+      ? [px(hist[hist.length-1].t).toFixed(1) + ',' + py(cur).toFixed(1)].concat(fc.map(d => px(d.t).toFixed(1) + ',' + py(d.v).toFixed(1))).join(' ')
+      : '';
+    return '<polyline points="' + histPts + '" fill="none" stroke="' + lineColor + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>'
+         + (fcPts ? '<polyline points="' + fcPts + '" fill="none" stroke="' + lineColor + '" stroke-width="1.6" stroke-dasharray="3 2" opacity="0.6" stroke-linejoin="round" stroke-linecap="round"/>' : '')
+         + '<circle cx="' + px(hist[hist.length-1].t).toFixed(1) + '" cy="' + py(cur).toFixed(1) + '" r="3" fill="' + lineColor + '"/>';
   }
 
   _s(e) { try { return parseFloat(this._hass.states[e]?.state) || 0; } catch(x) { return 0; } }
@@ -1923,6 +1950,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const windBft    = _wAttr ? (parseFloat(windKmM) < 1 ? 0 : parseFloat(windKmM) < 6 ? 1 : parseFloat(windKmM) < 12 ? 2 : parseFloat(windKmM) < 20 ? 3 : parseFloat(windKmM) < 29 ? 4 : parseFloat(windKmM) < 39 ? 5 : parseFloat(windKmM) < 50 ? 6 : parseFloat(windKmM) < 62 ? 7 : 8) : '--';
     const baro       = s('sensor.barometer_hasselt').toFixed(0);
     const water      = s('sensor.hasselt_zwarte_water_waterhoogte').toFixed(0);
+    const waterVerw  = s('sensor.hasselt_zwarte_water_waterhoogte_verwacht').toFixed(0);
 
     // ── Verwarming ──
 
@@ -2504,7 +2532,7 @@ ${(this._config && this._config.show_generator) ? `
       <div class="row">
         <span class="row-lbl">Waterstand Hasselt</span>
         <div style="display:flex;align-items:center;gap:8px">
-          <span class="row-val" style="color:#00ccff">${water} cm</span>
+          <span class="row-val" style="color:#00ccff">${water} cm <span style="font-size:0.7em;opacity:0.6">(verw. ${waterVerw})</span></span>
           <svg viewBox="0 0 120 36" style="width:80px;height:24px">${sparkSvg}</svg>
         </div>
       </div>
