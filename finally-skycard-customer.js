@@ -2268,7 +2268,7 @@ class FinallySkyCardMobile extends HTMLElement {
   <!-- ══ HERO ══ -->
   <div class="hero">
     <img class="hero-bg" src="${skyImg}"/>
-    <img src="/local/finally-card/boot.png" style="position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:100%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
+    <img src="/local/finally-card/boot.png" style="position:absolute;bottom:${(this._config && this._config.hero_boat_bottom) || 20}%;left:50%;transform:translateX(-50%);width:${(this._config && this._config.hero_boat_size_pct) || 62}%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <div class="hero-top">
