@@ -1,9 +1,17 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.1
+   Versie: 3.3.2
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.2 — Mobiel: "Klimaat & omgeving" samengevoegd met "Weer &
+   omgeving". Binnentemp/vochtigheid zijn nu uit te zetten via
+   show_indoor_climate: false (standaard nog aan, voor klanten die dat wél
+   hebben). Luchtdruk kwam voorheen van Eriks eigen barometer-sensor (die
+   voor andere klanten altijd op 0 bleef staan) — leest nu de pressure-
+   attribuut van de al gebruikte generieke weerentiteit, geen aparte sensor
+   meer nodig.
 
    v3.3.1 — Kiosk: batterij-icoontje bij Totaal SOC stond liggend (breed,
    plat) en leek op kleine schermen op een minteken. Nu rechtop (staand
@@ -2175,6 +2183,7 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── Klimaat ──
     const tempBinnen = '--';
+    const showIndoorClimate = (this._config && this._config.show_indoor_climate) !== false;
     const wcond      = hass ? st('weather.forecast_thuis') : '--';
     const tempBuiten = hass ? (hass.states['weather.forecast_thuis']?.attributes?.temperature ?? '--') : '--';
     const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
@@ -2189,7 +2198,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const windDisplay = windKm === '--' ? '--' : (windUnitMs ? (parseFloat(windKm) / 3.6).toFixed(1) : windKm);
     const windUnitLbl = windUnitMs ? 'm/s' : 'km/h';
     const windBft    = _wAttr ? (parseFloat(windKmM) < 1 ? 0 : parseFloat(windKmM) < 6 ? 1 : parseFloat(windKmM) < 12 ? 2 : parseFloat(windKmM) < 20 ? 3 : parseFloat(windKmM) < 29 ? 4 : parseFloat(windKmM) < 39 ? 5 : parseFloat(windKmM) < 50 ? 6 : parseFloat(windKmM) < 62 ? 7 : 8) : '--';
-    const baro       = s('sensor.barometer_hasselt').toFixed(0);
+    const baro       = (_wAttr && _wAttr.pressure != null) ? Math.round(_wAttr.pressure) : '--';
     const water      = s('sensor.hasselt_zwarte_water_waterhoogte').toFixed(0);
     const waterVerw  = s('sensor.hasselt_zwarte_water_waterhoogte_verwacht').toFixed(0);
 
@@ -2731,44 +2740,6 @@ class FinallySkyCardMobile extends HTMLElement {
     </div>
   </div>
 
-  <!-- ══ KLIMAAT & OMGEVING ══ -->
-  <div class="section">
-    <div class="section-title">Klimaat & omgeving</div>
-    <div class="card-grid-3">
-      <div class="mini-card">
-        <div class="lbl">Temp</div>
-        <div class="val-lg" style="color:#ff8844">${tempBinnen}°C</div>
-        <div class="sub">aan boord</div>
-      </div>
-      <div class="mini-card">
-        <div class="lbl">Vochtigheid</div>
-        <div class="val-lg" style="color:#00ccff">${vocht}%</div>
-      </div>
-      <div class="mini-card">
-        <div class="lbl">Buiten</div>
-        <div class="val-lg" style="color:#88ccff">${tempBuiten}°C</div>
-        <div class="sub">${wcond !== '--' ? wcond : 'onbekend'}</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windDisplay} ${windUnitLbl} · ${windDir} · ${windBft} Bft</span></div>
-      <div class="row">
-        <span class="row-lbl">Waterstand Hasselt</span>
-        <div style="display:flex;align-items:center;gap:8px">
-          <span class="row-val" style="color:#00ccff">${water} cm <span style="font-size:0.7em;opacity:0.6">(verw. ${waterVerw})</span></span>
-          <svg viewBox="0 0 120 36" style="width:80px;height:24px">${sparkSvg}</svg>
-        </div>
-      </div>
-      ${(this._config && this._config.hide_watertank) ? '' : `
-      <div class="row">
-        <span class="row-lbl">Watertank</span>
-        <div style="text-align:right">
-<span class="row-val">—</span>
-        </div>
-      </div>
-      `}
-    </div>
-  </div>
 
 ${(this._config && this._config.show_kabola) ? `
   <!-- ══ KABOLA VERWARMING ══ -->
@@ -2789,6 +2760,43 @@ ${(this._config && this._config.show_kabola) ? `
   <!-- ══ WEER & OMGEVING ══ -->
   <div class="section">
     <div class="section-title">Weer & omgeving</div>
+
+    <div class="card-grid-3">
+      ${showIndoorClimate ? `
+      <div class="mini-card">
+        <div class="lbl">Temp</div>
+        <div class="val-lg" style="color:#ff8844">${tempBinnen}°C</div>
+        <div class="sub">aan boord</div>
+      </div>
+      <div class="mini-card">
+        <div class="lbl">Vochtigheid</div>
+        <div class="val-lg" style="color:#00ccff">${vocht}%</div>
+      </div>
+      ` : ''}
+      <div class="mini-card">
+        <div class="lbl">Buiten</div>
+        <div class="val-lg" style="color:#88ccff">${tempBuiten}°C</div>
+        <div class="sub">${wcond !== '--' ? wcond : 'onbekend'}</div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:8px">
+      <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windDisplay} ${windUnitLbl} · ${windDir} · ${windBft} Bft</span></div>
+      <div class="row">
+        <span class="row-lbl">Waterstand Hasselt</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="row-val" style="color:#00ccff">${water} cm <span style="font-size:0.7em;opacity:0.6">(verw. ${waterVerw})</span></span>
+          <svg viewBox="0 0 120 36" style="width:80px;height:24px">${sparkSvg}</svg>
+        </div>
+      </div>
+      ${(this._config && this._config.hide_watertank) ? '' : `
+      <div class="row">
+        <span class="row-lbl">Watertank</span>
+        <div style="text-align:right">
+<span class="row-val">—</span>
+        </div>
+      </div>
+      `}
+    </div>
 
     <!-- KNMI waarschuwing conditioneel -->
     ${knmiCode !== 'Groen' && knmiCode !== '--' ? `
