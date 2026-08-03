@@ -1,9 +1,15 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.2
+   Versie: 3.3.3
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.3 — MPPT-status (kiosk + mobiel) toonde de ruwe Engelse
+   Victron-waarde (bijv. "bulk", "absorption", "float"). Nu vertaald naar
+   leesbaar Nederlands ("Volop laden", "Absorptie", "Druppellading", etc.)
+   via een gedeelde vertaaltabel; onbekende waarden vallen terug op de
+   ruwe tekst.
 
    v3.3.2 — Mobiel: "Klimaat & omgeving" samengevoegd met "Weer &
    omgeving". Binnentemp/vochtigheid zijn nu uit te zetten via
@@ -80,6 +86,22 @@
    quattro_output_power_l1_entity, quattro_output_voltage_l1_entity,
    quattro_overload_alarm_entity), met fallback op Eriks eigen serienummers.
    ============================================================ */
+
+// Vertaling van de Victron MPPT/laadregelaar "state"-waarden naar leesbaar Nederlands.
+// Onvertaalde/onbekende waarden vallen terug op de ruwe (Engelse) tekst.
+const MPPT_STATE_NL = {
+  off: 'Uit', low_power: 'Laag vermogen', fault: 'Storing', bulk: 'Volop laden',
+  absorption: 'Absorptie', float: 'Druppellading', storage: 'Opslagmodus', equalize: 'Egaliseren',
+  passthrough: 'Doorvoer', inverting: 'Omvormen', power_assist: 'Vermogensondersteuning',
+  power_supply: 'Voeding', sustain: 'In stand houden', starting_up: 'Opstarten',
+  repeated_absorption: 'Herhaalde absorptie', auto_equalize: 'Automatisch egaliseren',
+  battery_safe: 'Accu-veilig', external_control: 'Externe besturing', discharging: 'Ontladen',
+  sustain_alt: 'In stand houden', recharging: 'Herladen', scheduled_recharging: 'Geplande herlading',
+};
+function mpptStateLabel(raw) {
+  if (!raw || raw === '--') return '--';
+  return MPPT_STATE_NL[raw] || raw;
+}
 
 class FinallySkyCard extends HTMLElement {
   constructor() {
@@ -894,7 +916,7 @@ class FinallySkyCard extends HTMLElement {
 
     // ── Systeem ──
     const sysState  = hass ? st('sensor.gx_device_system_state') : '--';
-    const mpptState = hass ? st(mpptStateEntity) : '--';
+    const mpptState = hass ? mpptStateLabel(st(mpptStateEntity)) : '--';
     const acV       = hass ? s(quattroOutputVoltageL1Entity).toFixed(0) : '--';
     const acHz      = hass ? s(quattroOutputFrequencyL1Entity).toFixed(1) : '--';
     const acInV     = hass ? s(quattroInputVoltageL1Entity).toFixed(0) : '--';
@@ -2148,7 +2170,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const pvMaand    = s(pvMaandEntity).toFixed(1);
     const pvMax      = 1800;
     const pvPct      = Math.min(pvW / pvMax * 100, 100);
-    const mpptState  = st(mpptStateEntity);
+    const mpptState  = mpptStateLabel(st(mpptStateEntity));
     const pvBesparing = (parseFloat(pvMaand) * 0.50).toFixed(2);
     // Walstroom-verbruik (configureerbaar, valt terug op Eriks eigen Shelly-sensoren)
     const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
