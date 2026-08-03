@@ -1,9 +1,15 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.3
+   Versie: 3.3.4
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.4 — Nieuwe optionele "Machinekamer"-tegel (mobiel) in de
+   Weer & omgeving-sectie: toont temperatuur van een configureerbare sensor
+   (engine_room_temp_entity), met vorstwaarschuwing (rood, ⚠️) zodra de
+   temperatuur op of onder engine_room_frost_temp komt (standaard 5°C).
+   Verborgen als engine_room_temp_entity niet is ingesteld.
 
    v3.3.3 — MPPT-status (kiosk + mobiel) toonde de ruwe Engelse
    Victron-waarde (bijv. "bulk", "absorption", "float"). Nu vertaald naar
@@ -2206,6 +2212,11 @@ class FinallySkyCardMobile extends HTMLElement {
     // ── Klimaat ──
     const tempBinnen = '--';
     const showIndoorClimate = (this._config && this._config.show_indoor_climate) !== false;
+    const showEngineRoomTemp = !!(this._config && this._config.engine_room_temp_entity);
+    const engineRoomTempEntity = (this._config && this._config.engine_room_temp_entity) || '';
+    const engineRoomFrostTemp = (this._config && this._config.engine_room_frost_temp) != null ? this._config.engine_room_frost_temp : 5;
+    const engineRoomTemp = showEngineRoomTemp ? s(engineRoomTempEntity) : 0;
+    const engineRoomFrostRisk = showEngineRoomTemp && engineRoomTemp <= engineRoomFrostTemp;
     const wcond      = hass ? st('weather.forecast_thuis') : '--';
     const tempBuiten = hass ? (hass.states['weather.forecast_thuis']?.attributes?.temperature ?? '--') : '--';
     const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
@@ -2800,6 +2811,13 @@ ${(this._config && this._config.show_kabola) ? `
         <div class="val-lg" style="color:#88ccff">${tempBuiten}°C</div>
         <div class="sub">${wcond !== '--' ? wcond : 'onbekend'}</div>
       </div>
+      ${showEngineRoomTemp ? `
+      <div class="mini-card" style="${engineRoomFrostRisk ? 'border-color:rgba(255,60,60,0.5);background:rgba(255,60,60,0.08)' : ''}">
+        <div class="lbl">Machinekamer</div>
+        <div class="val-lg" style="color:${engineRoomFrostRisk ? '#ff4444' : '#00cc66'}">${engineRoomTemp.toFixed(1)}°C</div>
+        <div class="sub">${engineRoomFrostRisk ? '⚠️ Vorstrisico' : 'normaal'}</div>
+      </div>
+      ` : ''}
     </div>
     <div class="card" style="margin-bottom:8px">
       <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windDisplay} ${windUnitLbl} · ${windDir} · ${windBft} Bft</span></div>
