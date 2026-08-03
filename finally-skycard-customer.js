@@ -1,9 +1,17 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.4
+   Versie: 3.2.5
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.5 — Walstroom-verbruik in de energie-flow/popup is nu configureerbaar
+   via walstroom_dagverbruik_entity, walstroom_verbruik_maand_entity en
+   walstroom_verbruik_watt_entity, met fallback op Eriks eigen
+   Shelly-sensoren. Zonder Shelly-vermogenmeting bij een klant tonen
+   dagverbruik/maandverbruik nog altijd 0,00 kWh (geen bron beschikbaar) —
+   het instant-vermogen kan wel gekoppeld worden aan de bestaande AC-input
+   power-sensor.
 
    v3.2.4 — Bevestigingspopup toegevoegd bij handmatig inschakelen van
    walstroom én bij handmatig starten van de generator (kiosk + mobiel), om
@@ -432,6 +440,10 @@ class FinallySkyCard extends HTMLElement {
     const quattroOutputPowerL1Entity = (this._config && this._config.quattro_output_power_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_power_l1';
     const quattroOutputVoltageL1Entity = (this._config && this._config.quattro_output_voltage_l1_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_output_voltage_l1';
     const quattroOverloadAlarmEntity = (this._config && this._config.quattro_overload_alarm_entity) || 'sensor.quattro_24_5000_120_2x100_id_276_overload_alarm';
+    // Walstroom-verbruik (configureerbaar, valt terug op Eriks eigen Shelly-sensoren)
+    const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
+    const walstroomVerbruikMaandEntity = (this._config && this._config.walstroom_verbruik_maand_entity) || 'sensor.walstroom_verbruik_maand';
+    const walstroomVerbruikWattEntity = (this._config && this._config.walstroom_verbruik_watt_entity) || 'sensor.walstroom_verbruik_watt';
 
     if (id === 'energie') {
       const lW=_s('sensor.gx_device_consumption_power_l1'), pW=_s('sensor.gx_device_pv_power'),
@@ -449,13 +461,13 @@ class FinallySkyCard extends HTMLElement {
       T('ep-pvd',_s('sensor.solar_yield_vandaag').toFixed(2)+' kWh');
       T('ep-pvg',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
       T('ep-pvm',_s('sensor.solar_yield_maand').toFixed(1)+' kWh');
-      T('ep-gd',_s('sensor.walstroom_dagverbruik').toFixed(2)+' kWh');
+      T('ep-gd',_s(walstroomDagverbruikEntity).toFixed(2)+' kWh');
       T('ep-ld',_s('sensor.gx_device_ac_uitgang_dagverbruik').toFixed(2)+' kWh');
       T('ep-lm',_s('sensor.gx_device_verbruik_aan_boord_maand').toFixed(1)+' kWh');
       T('ep-dcv',dcV+' V'); T('ep-dcw',dcW+' W');
       // Kosten & rendement
       const pvM2  = _s('sensor.solar_yield_maand');
-      const walM  = _s('sensor.walstroom_verbruik_maand');
+      const walM  = _s(walstroomVerbruikMaandEntity);
       const uitM  = _s('sensor.gx_device_verbruik_aan_boord_maand');
       const inTot = pvM2 + walM;
       const rend  = inTot > 0 ? ((uitM / inTot) * 100).toFixed(1) + ' %' : '-- %';
@@ -2050,8 +2062,12 @@ class FinallySkyCardMobile extends HTMLElement {
     const pvPct      = Math.min(pvW / pvMax * 100, 100);
     const mpptState  = st(mpptStateEntity);
     const pvBesparing = (parseFloat(pvMaand) * 0.50).toFixed(2);
-    const walDag     = s('sensor.walstroom_dagverbruik').toFixed(2);
-    const walMaand   = s('sensor.walstroom_verbruik_maand').toFixed(2);
+    // Walstroom-verbruik (configureerbaar, valt terug op Eriks eigen Shelly-sensoren)
+    const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
+    const walstroomVerbruikMaandEntity = (this._config && this._config.walstroom_verbruik_maand_entity) || 'sensor.walstroom_verbruik_maand';
+    const walstroomVerbruikWattEntity = (this._config && this._config.walstroom_verbruik_watt_entity) || 'sensor.walstroom_verbruik_watt';
+    const walDag     = s(walstroomDagverbruikEntity).toFixed(2);
+    const walMaand   = s(walstroomVerbruikMaandEntity).toFixed(2);
     const walKosten  = (parseFloat(walMaand) * 0.50).toFixed(2);
     const loadDag    = s('sensor.gx_device_ac_uitgang_dagverbruik').toFixed(2);
     const loadMaand  = s('sensor.gx_device_quattro_uitgang_maandoverzicht').toFixed(1);
@@ -2119,7 +2135,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const walSocketAan = st(walstroomSwitchEntity) === 'on';
     const walOverride  = st(walstroomOverrideEntity) === 'on';
     const knmiCode   = st('sensor.knmi_weercode');
-    const walstroom  = s('sensor.walstroom_verbruik_watt').toFixed(0);
+    const walstroom  = s(walstroomVerbruikWattEntity).toFixed(0);
 
     // ── Zon ──
     const sunState = st('sun.sun');
