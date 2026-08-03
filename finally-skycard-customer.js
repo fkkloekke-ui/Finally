@@ -1,9 +1,14 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.5
+   Versie: 3.2.6
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.6 — PV-opbrengst (vandaag/maand) in de energie-tegel is nu
+   configureerbaar via pv_vandaag_entity en pv_maand_entity, met fallback
+   op Eriks eigen Template Helpers. "Gisteren" was al configureerbaar sinds
+   v3.2.1 via mppt_yield_yesterday_entity.
 
    v3.2.5 — Walstroom-verbruik in de energie-flow/popup is nu configureerbaar
    via walstroom_dagverbruik_entity, walstroom_verbruik_maand_entity en
@@ -444,6 +449,9 @@ class FinallySkyCard extends HTMLElement {
     const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
     const walstroomVerbruikMaandEntity = (this._config && this._config.walstroom_verbruik_maand_entity) || 'sensor.walstroom_verbruik_maand';
     const walstroomVerbruikWattEntity = (this._config && this._config.walstroom_verbruik_watt_entity) || 'sensor.walstroom_verbruik_watt';
+    // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
+    const pvVandaagEntity = (this._config && this._config.pv_vandaag_entity) || 'sensor.solar_yield_vandaag';
+    const pvMaandEntity = (this._config && this._config.pv_maand_entity) || 'sensor.solar_yield_maand';
 
     if (id === 'energie') {
       const lW=_s('sensor.gx_device_consumption_power_l1'), pW=_s('sensor.gx_device_pv_power'),
@@ -458,15 +466,15 @@ class FinallySkyCard extends HTMLElement {
       T('ep-batt',(bA>0?'▲ +':'▼ ')+Math.abs(bW).toFixed(0)+' W'); T('ep-batt-sub',bA>0?'Laden':'Ontladen');
       C('ep-batt',bA>0?'#00ff88':'#ff9900');
       T('ep-acv',acV+' V'); T('ep-ach',acH+' Hz'); T('ep-state',_st('sensor.gx_device_system_state')); T('ep-state-sub',dcV+' V DC');
-      T('ep-pvd',_s('sensor.solar_yield_vandaag').toFixed(2)+' kWh');
+      T('ep-pvd',_s(pvVandaagEntity).toFixed(2)+' kWh');
       T('ep-pvg',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
-      T('ep-pvm',_s('sensor.solar_yield_maand').toFixed(1)+' kWh');
+      T('ep-pvm',_s(pvMaandEntity).toFixed(1)+' kWh');
       T('ep-gd',_s(walstroomDagverbruikEntity).toFixed(2)+' kWh');
       T('ep-ld',_s('sensor.gx_device_ac_uitgang_dagverbruik').toFixed(2)+' kWh');
       T('ep-lm',_s('sensor.gx_device_verbruik_aan_boord_maand').toFixed(1)+' kWh');
       T('ep-dcv',dcV+' V'); T('ep-dcw',dcW+' W');
       // Kosten & rendement
-      const pvM2  = _s('sensor.solar_yield_maand');
+      const pvM2  = _s(pvMaandEntity);
       const walM  = _s(walstroomVerbruikMaandEntity);
       const uitM  = _s('sensor.gx_device_verbruik_aan_boord_maand');
       const inTot = pvM2 + walM;
@@ -481,9 +489,9 @@ class FinallySkyCard extends HTMLElement {
     else if (id === 'solar') {
       const pW=_s('sensor.gx_device_pv_power'), pA=_s('sensor.gx_device_pv_current').toFixed(1);
       T('sp-nu',pW+' W'); W('sp-nu-bar',pW,1800); T('sp-staat',_st(mpptStateEntity)); T('sp-a',pA+' A');
-      T('sp-d',_s('sensor.solar_yield_vandaag').toFixed(2)+' kWh');
+      T('sp-d',_s(pvVandaagEntity).toFixed(2)+' kWh');
       T('sp-g',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
-      T('sp-m',_s('sensor.solar_yield_maand').toFixed(1)+' kWh');
+      T('sp-m',_s(pvMaandEntity).toFixed(1)+' kWh');
       T('sp-elev',parseFloat(_at('sun.sun','elevation')).toFixed(1)+'°');
       T('sp-azim',parseFloat(_at('sun.sun','azimuth')).toFixed(0)+'°');
       T('sp-op',_nT(_at('sun.sun','next_rising'))); T('sp-ond',_nT(_at('sun.sun','next_setting')));
@@ -796,8 +804,11 @@ class FinallySkyCard extends HTMLElement {
     const _battPowR  = hass ? s('sensor.gx_device_dc_battery_power') : 0;
     const _discharge = Math.abs(_battPowR);
     const battDuur   = _battPowR < -20 ? (_soc30wh / _discharge).toFixed(1) : (hass ? s('sensor.verwachte_accuduur').toFixed(1) : '--');
-    const pvVandaag  = hass ? s('sensor.solar_yield_vandaag').toFixed(2) : '--';
-    const pvMaand    = hass ? s('sensor.solar_yield_maand').toFixed(1) : '--';
+    // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
+    const pvVandaagEntity = (this._config && this._config.pv_vandaag_entity) || 'sensor.solar_yield_vandaag';
+    const pvMaandEntity = (this._config && this._config.pv_maand_entity) || 'sensor.solar_yield_maand';
+    const pvVandaag  = hass ? s(pvVandaagEntity).toFixed(2) : '--';
+    const pvMaand    = hass ? s(pvMaandEntity).toFixed(1) : '--';
     const pvGisteren = hass ? s(mpptYieldYesterdayEntity).toFixed(2) : '--';
     const battChar   = parseFloat(battA) > 0;
 
@@ -2055,9 +2066,12 @@ class FinallySkyCardMobile extends HTMLElement {
     const bms2Cycli = s('sensor.jk_bms_2_jk_bms_2_num_cycles');
 
     // ── PV ──
-    const pvVandaag  = s('sensor.solar_yield_vandaag').toFixed(2);
+    // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
+    const pvVandaagEntity = (this._config && this._config.pv_vandaag_entity) || 'sensor.solar_yield_vandaag';
+    const pvMaandEntity = (this._config && this._config.pv_maand_entity) || 'sensor.solar_yield_maand';
+    const pvVandaag  = s(pvVandaagEntity).toFixed(2);
     const pvGisteren = s(mpptYieldYesterdayEntity).toFixed(2);
-    const pvMaand    = s('sensor.solar_yield_maand').toFixed(1);
+    const pvMaand    = s(pvMaandEntity).toFixed(1);
     const pvMax      = 1800;
     const pvPct      = Math.min(pvW / pvMax * 100, 100);
     const mpptState  = st(mpptStateEntity);
