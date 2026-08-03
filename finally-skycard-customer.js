@@ -1,9 +1,13 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.9
+   Versie: 3.3.0
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.0 — Mobiele kaart: Generator-sectie verplaatst naar helemaal
+   onderaan, direct na Walstroom, zodat beide AC-invoerbronnen (AC-in-1
+   generator, AC-in-2 walstroom) bij elkaar staan.
 
    v3.2.9 — Mobiele generator-tegel opgesplitst: aparte grote drukknop
    (zelfde .touch-btn stijl als walstroom, met bevestigingspopup) om te
@@ -2683,33 +2687,6 @@ class FinallySkyCardMobile extends HTMLElement {
     `}
   </div>
 
-${(this._config && this._config.show_generator) ? `
-  <!-- ══ GENERATOR ══ -->
-  <div class="section">
-    <div class="section-title">Generator</div>
-
-    <!-- Start/stop knop -->
-    <div class="card-grid" style="margin-bottom:8px">
-      <div class="touch-btn" id="m-gen-toggle" data-entity="switch.generator_start_stop_manual_start"
-           style="border-color:rgba(0,255,136,${genManualOn==='on'?'0.5':'0.2'});background:${genManualOn==='on'?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.04)'}">
-        <div style="font-size:22px;margin-bottom:4px">⚡</div>
-        <div class="lbl">GENERATOR</div>
-        <div style="font-size:20px;font-weight:700;color:${genManualOn==='on'?'#00ff88':'rgba(255,255,255,0.3)'}">${genManualOn==='on'?'● AAN':'○ UIT'}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">tik om te schakelen</div>
-      </div>
-    </div>
-
-    <!-- Info -->
-    <div class="card">
-      <div style="font-size:18px;font-weight:800;color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'};margin-bottom:2px">${genActive?'AAN':'UIT'}</div>
-      <div style="font-size:13px;color:rgba(255,255,255,0.95);margin-bottom:10px">${genActive?genState:'Gestopt'}</div>
-      <div class="row"><span class="row-lbl">Draaiuren vandaag</span><span class="row-val">${genRuntimeToday} u</span></div>
-      <div class="row"><span class="row-lbl">Draaiuren totaal</span><span class="row-val">${genRuntimeTotal} u</span></div>
-      <div class="row"><span class="row-lbl">Sinds onderhoud</span><span class="row-val">${genServiceCounter} u</span></div>
-    </div>
-  </div>
-` : ''}
-
   <!-- ══ ZONNEPANELEN ══ -->
   <div class="section">
     <div class="section-title">Zonnepanelen</div>
@@ -2955,6 +2932,33 @@ ${(this._config && this._config.show_kabola) ? `
       <div style="font-size:11px;color:rgba(255,255,255,0.95);text-align:center;margin-top:8px">tik om in te stellen ›</div>
     </div>
   </div>
+
+${(this._config && this._config.show_generator) ? `
+  <!-- ══ GENERATOR (AC-in-1) ══ -->
+  <div class="section">
+    <div class="section-title">Generator</div>
+
+    <!-- Start/stop knop -->
+    <div class="card-grid" style="margin-bottom:8px">
+      <div class="touch-btn" id="m-gen-toggle" data-entity="switch.generator_start_stop_manual_start"
+           style="border-color:rgba(0,255,136,${genManualOn==='on'?'0.5':'0.2'});background:${genManualOn==='on'?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.04)'}">
+        <div style="font-size:22px;margin-bottom:4px">⚡</div>
+        <div class="lbl">GENERATOR</div>
+        <div style="font-size:20px;font-weight:700;color:${genManualOn==='on'?'#00ff88':'rgba(255,255,255,0.3)'}">${genManualOn==='on'?'● AAN':'○ UIT'}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">tik om te schakelen</div>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="card">
+      <div style="font-size:18px;font-weight:800;color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'};margin-bottom:2px">${genActive?'AAN':'UIT'}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.95);margin-bottom:10px">${genActive?genState:'Gestopt'}</div>
+      <div class="row"><span class="row-lbl">Draaiuren vandaag</span><span class="row-val">${genRuntimeToday} u</span></div>
+      <div class="row"><span class="row-lbl">Draaiuren totaal</span><span class="row-val">${genRuntimeTotal} u</span></div>
+      <div class="row"><span class="row-lbl">Sinds onderhoud</span><span class="row-val">${genServiceCounter} u</span></div>
+    </div>
+  </div>
+` : ''}
 
 
   <!-- WALSTROOM INSTELLINGEN POPUP -->
