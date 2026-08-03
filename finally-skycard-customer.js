@@ -1,9 +1,14 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.0
+   Versie: 3.3.1
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.1 — Kiosk: batterij-icoontje bij Totaal SOC stond liggend (breed,
+   plat) en leek op kleine schermen op een minteken. Nu rechtop (staand
+   accu-icoon, vulling van onder naar boven) en iets groter
+   (soc_icon_size default 30 → 34px).
 
    v3.3.0 — Mobiele kaart: Generator-sectie verplaatst naar helemaal
    onderaan, direct na Walstroom, zodat beide AC-invoerbronnen (AC-in-1
@@ -1374,10 +1379,10 @@ ${(this._config && this._config.hide_bms) ? '' : `
     <div class="batt-detail" style="width:100%;flex:${(this._config && this._config.soc_tile_flex) || 1};text-align:center;padding:10px 16px">
       <div style="font-size:10px;color:rgba(255,255,255,0.95);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Totaal SOC</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:10px">
-        <svg width="${(this._config && this._config.soc_icon_size) || 30}" height="${((this._config && this._config.soc_icon_size) || 30) * 0.55}" viewBox="0 0 48 26" fill="none">
-          <rect x="1" y="1" width="42" height="24" rx="4" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
-          <rect x="44" y="9" width="4" height="8" rx="1.5" fill="rgba(255,255,255,0.55)"/>
-          <rect x="4" y="4" width="${Math.max(4, 36 * (battSoc/100))}" height="18" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
+        <svg width="${(this._config && this._config.soc_icon_size) || 34}" height="${((this._config && this._config.soc_icon_size) || 34) * 1.85}" viewBox="0 0 26 48" fill="none">
+          <rect x="9" y="1" width="8" height="4" rx="1.5" fill="rgba(255,255,255,0.55)"/>
+          <rect x="1" y="5" width="24" height="42" rx="4" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+          <rect x="5" y="${42 - Math.max(4, 34 * (battSoc/100))}" width="16" height="${Math.max(4, 34 * (battSoc/100))}" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
         </svg>
         <div style="font-size:${(this._config && this._config.soc_font_size) || 38}px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${Math.round(battSoc)}%</div>
       </div>
