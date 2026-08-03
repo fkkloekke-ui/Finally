@@ -1,9 +1,15 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.6
+   Versie: 3.2.7
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.7 — Scroll-reset in de mobiele energie-popup gefixt: de hass-update
+   deed elke 2 seconden een volledige herrender, ook terwijl deze popup open
+   stond, waardoor scrollen telkens terugsprong naar boven. Zelfde patroon
+   als eerder toegepast op Eriks eigen kaart (skip volledige render zolang
+   een popup open is).
 
    v3.2.6 — PV-opbrengst (vandaag/maand) in de energie-tegel is nu
    configureerbaar via pv_vandaag_entity en pv_maand_entity, met fallback
@@ -1921,6 +1927,8 @@ class FinallySkyCardMobile extends HTMLElement {
     const mVerwPop = this.shadowRoot && this.shadowRoot.getElementById('m-verw-popup');
     if (mVerwPop && mVerwPop.style.display === 'flex') return;
     if (this._walInstPopupOpen) return;
+    // Render niet als energie-popup open is (voorkomt scroll-reset)
+    if (this._energiePopupOpen) return;
     if (now - this._lastUpdate > 2000) {
       this._lastUpdate = now;
       this._render();
