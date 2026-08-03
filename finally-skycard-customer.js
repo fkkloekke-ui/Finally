@@ -1,9 +1,17 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.7
+   Versie: 3.2.8
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.8 — Accubank "tijd te gaan" is nu configureerbaar via
+   battery_capacity_wh + battery_min_soc_pct (nieuwe berekening: bruikbare
+   Wh = capaciteit × (huidige SOC% − minimale SOC%), gedeeld door huidig
+   ontlaadvermogen). Zonder deze twee velden valt de kaart terug op Eriks
+   eigen Template Helpers (accu_beschikbaar_wh/verwachte_accuduur). Ook de
+   accu-popup gebruikte nog hardcoded SmartShunt-entities i.p.v. de
+   configureerbare velden — dat is nu ook rechtgezet.
 
    v3.2.7 — Scroll-reset in de mobiele energie-popup gefixt: de hass-update
    deed elke 2 seconden een volledige herrender, ook terwijl deze popup open
@@ -458,11 +466,18 @@ class FinallySkyCard extends HTMLElement {
     // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
     const pvVandaagEntity = (this._config && this._config.pv_vandaag_entity) || 'sensor.solar_yield_vandaag';
     const pvMaandEntity = (this._config && this._config.pv_maand_entity) || 'sensor.solar_yield_maand';
+    // SmartShunt (configureerbaar, valt terug op Eriks eigen serienummer)
+    const socEntity  = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
+    const voltEntity = (this._config && this._config.smartshunt_voltage_entity) || 'sensor.smartshunt_hq2224ru6gc_spanning';
+    const currEntity = (this._config && this._config.smartshunt_current_entity) || 'sensor.smartshunt_hq2224ru6gc_stroom';
+    // Accu-capaciteit (configureerbaar; zonder deze twee velden valt de kaart terug op Eriks eigen Template Helpers)
+    const battCapacityWh = this._config && this._config.battery_capacity_wh;
+    const battMinSocPct = this._config && this._config.battery_min_soc_pct;
 
     if (id === 'energie') {
       const lW=_s('sensor.gx_device_consumption_power_l1'), pW=_s('sensor.gx_device_pv_power'),
             gW=_s(quattroInputPowerL1Entity),
-            bW=_s('sensor.gx_device_dc_battery_power'), bA=_s('sensor.smartshunt_hq2224ru6gc_stroom'),
+            bW=_s('sensor.gx_device_dc_battery_power'), bA=_s(currEntity),
             acV=_s(quattroOutputVoltageL1Entity).toFixed(0),
             acH=_s(quattroOutputFrequencyL1Entity).toFixed(1),
             dcV=_s(quattroDcVoltageEntity).toFixed(1),
@@ -505,15 +520,22 @@ class FinallySkyCard extends HTMLElement {
       try { const r=new Date(_at('sun.sun','next_rising')),s=new Date(_at('sun.sun','next_setting')); T('sp-dag',((s-r)/3600000).toFixed(1)+' uur'); } catch(e){}
     }
     else if (id === 'accu') {
-      const soc=_s('sensor.smartshunt_hq2224ru6gc_batterij'),
-            v=_s('sensor.smartshunt_hq2224ru6gc_spanning').toFixed(2),
-            a=_s('sensor.smartshunt_hq2224ru6gc_stroom').toFixed(1),
-            w=_s('sensor.gx_device_dc_battery_power').toFixed(0),
-            wh=_s('sensor.accu_beschikbaar_wh').toFixed(0);
-            const _soc30 = _s('sensor.accu_beschikbaar_wh') * 0.70;
-            const _battP = _s('sensor.gx_device_dc_battery_power');
-            const _dis = Math.abs(_battP);
-            dur = _battP < -20 ? (_soc30 / _dis).toFixed(1) : _s('sensor.verwachte_accuduur').toFixed(1);
+      const soc=_s(socEntity),
+            v=_s(voltEntity).toFixed(2),
+            a=_s(currEntity).toFixed(1),
+            w=_s('sensor.gx_device_dc_battery_power').toFixed(0);
+      const _battP = _s('sensor.gx_device_dc_battery_power');
+      const _dis = Math.abs(_battP);
+      let wh, dur;
+      if (battCapacityWh && battMinSocPct != null) {
+        const usableWh = Math.max(0, battCapacityWh * (soc - battMinSocPct) / 100);
+        wh = usableWh.toFixed(0);
+        dur = _battP < -20 ? (usableWh / _dis).toFixed(1) : '--';
+      } else {
+        wh = _s('sensor.accu_beschikbaar_wh').toFixed(0);
+        const _soc30 = _s('sensor.accu_beschikbaar_wh') * 0.70;
+        dur = _battP < -20 ? (_soc30 / _dis).toFixed(1) : _s('sensor.verwachte_accuduur').toFixed(1);
+      }
       const c=soc>35?'#00cc66':soc>30?'#ffa500':'#ff4444';
       T('ap-soc',Math.round(soc)+'%'); C('ap-soc',c);
       const bar=container.querySelector('#ap-soc-bar');
@@ -799,17 +821,27 @@ class FinallySkyCard extends HTMLElement {
     const socEntity  = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
     const voltEntity = (this._config && this._config.smartshunt_voltage_entity) || 'sensor.smartshunt_hq2224ru6gc_spanning';
     const currEntity = (this._config && this._config.smartshunt_current_entity) || 'sensor.smartshunt_hq2224ru6gc_stroom';
+    // Accu-capaciteit (configureerbaar; zonder deze twee velden valt de kaart terug op Eriks eigen Template Helpers)
+    const battCapacityWh = this._config && this._config.battery_capacity_wh;
+    const battMinSocPct = this._config && this._config.battery_min_soc_pct;
     const battSoc    = hass ? s(socEntity) : 0;
     const battV      = hass ? s(voltEntity).toFixed(1) : '--';
     const battVGeneric = hass ? s('sensor.gx_device_dc_battery_voltage').toFixed(2) : '--';
     const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
     const windW       = hass ? s(windEntity).toFixed(0) : '--';
     const battA      = hass ? s(currEntity).toFixed(1) : '--';
-    const battWh     = hass ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--';
-    const _soc30wh   = hass ? s('sensor.accu_beschikbaar_wh') * 0.70 : 0;
     const _battPowR  = hass ? s('sensor.gx_device_dc_battery_power') : 0;
     const _discharge = Math.abs(_battPowR);
-    const battDuur   = _battPowR < -20 ? (_soc30wh / _discharge).toFixed(1) : (hass ? s('sensor.verwachte_accuduur').toFixed(1) : '--');
+    let battWh, battDuur;
+    if (hass && battCapacityWh && battMinSocPct != null) {
+      const _usableWh = Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100);
+      battWh = _usableWh.toFixed(0);
+      battDuur = _battPowR < -20 ? (_usableWh / _discharge).toFixed(1) : '--';
+    } else {
+      battWh = hass ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--';
+      const _soc30wh = hass ? s('sensor.accu_beschikbaar_wh') * 0.70 : 0;
+      battDuur = _battPowR < -20 ? (_soc30wh / _discharge).toFixed(1) : (hass ? s('sensor.verwachte_accuduur').toFixed(1) : '--');
+    }
     // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
     const pvVandaagEntity = (this._config && this._config.pv_vandaag_entity) || 'sensor.solar_yield_vandaag';
     const pvMaandEntity = (this._config && this._config.pv_maand_entity) || 'sensor.solar_yield_maand';
@@ -2050,10 +2082,20 @@ class FinallySkyCardMobile extends HTMLElement {
     const battV     = s(voltEntity).toFixed(2);
     const battVGeneric = s('sensor.gx_device_dc_battery_voltage').toFixed(2);
     const battA     = s(currEntity).toFixed(1);
-    const battWh    = s('sensor.accu_beschikbaar_wh').toFixed(0);
+    // Accu-capaciteit (configureerbaar; zonder deze twee velden valt de kaart terug op Eriks eigen Template Helpers)
+    const battCapacityWh = this._config && this._config.battery_capacity_wh;
+    const battMinSocPct = this._config && this._config.battery_min_soc_pct;
     const _battPowM  = s('sensor.gx_device_dc_battery_power');
-    const _soc30whM  = s('sensor.accu_beschikbaar_wh') * 0.70;
-    const battDuur   = _battPowM < -20 ? (_soc30whM / Math.abs(_battPowM)).toFixed(1) : s('sensor.verwachte_accuduur').toFixed(1);
+    let battWh, battDuur;
+    if (battCapacityWh && battMinSocPct != null) {
+      const _usableWhM = Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100);
+      battWh = _usableWhM.toFixed(0);
+      battDuur = _battPowM < -20 ? (_usableWhM / Math.abs(_battPowM)).toFixed(1) : '--';
+    } else {
+      battWh = s('sensor.accu_beschikbaar_wh').toFixed(0);
+      const _soc30whM = s('sensor.accu_beschikbaar_wh') * 0.70;
+      battDuur = _battPowM < -20 ? (_soc30whM / Math.abs(_battPowM)).toFixed(1) : s('sensor.verwachte_accuduur').toFixed(1);
+    }
     const socColor  = this._socColor(battSoc);
 
     // ── BMS ──
