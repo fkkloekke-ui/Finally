@@ -1,9 +1,16 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.8
+   Versie: 3.2.9
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.9 — Mobiele generator-tegel opgesplitst: aparte grote drukknop
+   (zelfde .touch-btn stijl als walstroom, met bevestigingspopup) om te
+   starten/stoppen, en een losse info-kaart met alleen status, draaiuren
+   vandaag/totaal en draaiuren sinds onderhoud (nieuwe generieke sensor
+   generator_start_stop_service_counter). Kiosk-tegel ongewijzigd (compacte
+   layout, minder ruimte voor een grote knop).
 
    v3.2.8 — Accubank "tijd te gaan" is nu configureerbaar via
    battery_capacity_wh + battery_min_soc_pct (nieuwe berekening: bruikbare
@@ -2185,6 +2192,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const genManualOn    = st('switch.generator_start_stop_manual_start');
     const genRuntimeToday = s('sensor.generator_start_stop_today_runtime').toFixed(1);
     const genRuntimeTotal = s('sensor.generator_start_stop_total_runtime').toFixed(0);
+    const genServiceCounter = s('sensor.generator_start_stop_service_counter').toFixed(0);
     const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
     const windW       = s(windEntity).toFixed(0);
     const kabolaEntity      = (this._config && this._config.kabola_climate_entity) || 'climate.kabola';
@@ -2679,19 +2687,25 @@ ${(this._config && this._config.show_generator) ? `
   <!-- ══ GENERATOR ══ -->
   <div class="section">
     <div class="section-title">Generator</div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-        <div>
-          <div style="font-size:18px;font-weight:800;color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'}">${genActive?'AAN':'UIT'}</div>
-          <div style="font-size:13px;color:rgba(255,255,255,0.95)">${genActive?genState:'Gestopt'}</div>
-        </div>
-        <div id="m-gen-toggle" data-entity="switch.generator_start_stop_manual_start"
-             style="cursor:pointer;width:46px;height:26px;border-radius:13px;background:${genManualOn==='on'?'#00cc66':'rgba(255,255,255,0.15)'};position:relative;transition:background 0.2s">
-          <div style="position:absolute;top:3px;left:${genManualOn==='on'?'23px':'3px'};width:20px;height:20px;border-radius:50%;background:#fff;transition:left 0.2s"></div>
-        </div>
+
+    <!-- Start/stop knop -->
+    <div class="card-grid" style="margin-bottom:8px">
+      <div class="touch-btn" id="m-gen-toggle" data-entity="switch.generator_start_stop_manual_start"
+           style="border-color:rgba(0,255,136,${genManualOn==='on'?'0.5':'0.2'});background:${genManualOn==='on'?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.04)'}">
+        <div style="font-size:22px;margin-bottom:4px">⚡</div>
+        <div class="lbl">GENERATOR</div>
+        <div style="font-size:20px;font-weight:700;color:${genManualOn==='on'?'#00ff88':'rgba(255,255,255,0.3)'}">${genManualOn==='on'?'● AAN':'○ UIT'}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">tik om te schakelen</div>
       </div>
+    </div>
+
+    <!-- Info -->
+    <div class="card">
+      <div style="font-size:18px;font-weight:800;color:${genActive?'#00ff88':'rgba(255,255,255,0.3)'};margin-bottom:2px">${genActive?'AAN':'UIT'}</div>
+      <div style="font-size:13px;color:rgba(255,255,255,0.95);margin-bottom:10px">${genActive?genState:'Gestopt'}</div>
       <div class="row"><span class="row-lbl">Draaiuren vandaag</span><span class="row-val">${genRuntimeToday} u</span></div>
       <div class="row"><span class="row-lbl">Draaiuren totaal</span><span class="row-val">${genRuntimeTotal} u</span></div>
+      <div class="row"><span class="row-lbl">Sinds onderhoud</span><span class="row-val">${genServiceCounter} u</span></div>
     </div>
   </div>
 ` : ''}
