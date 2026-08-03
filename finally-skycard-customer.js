@@ -1,9 +1,15 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.2
+   Versie: 3.2.3
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.3 — Walstroom-tegel/override zijn nu configureerbaar via
+   walstroom_switch_entity en walstroom_override_entity (this._config), met
+   fallback op Eriks eigen switch.walstroom_socket_1 /
+   input_boolean.walstroom_override. Zonder deze config-velden ingevuld
+   werkte de knop nergens anders dan bij Erik zelf.
 
    v3.2.2 — Leesbaarheid buiten/in fel licht: alle grijze/gedimde tekst
    (rgba(255,255,255,0.1–0.7)) is nu bijna wit (0.95), en kleine labels/tekst
@@ -933,8 +939,10 @@ class FinallySkyCard extends HTMLElement {
     const pvActive   = pvW > 10 && sunAbove;
     const gridActive   = gridW > 20;
     const gridSpanning = parseFloat(acInV) > 100;
-    const walSocketAan = hass ? st('switch.walstroom_socket_1') === 'on' : false;
-    const walOverride  = hass ? st('input_boolean.walstroom_override') === 'on' : false;
+    const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
+    const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
+    const walSocketAan = hass ? st(walstroomSwitchEntity) === 'on' : false;
+    const walOverride  = hass ? st(walstroomOverrideEntity) === 'on' : false;
     const battActive = Math.abs(battPow) > 10;
 
     // Tijd
@@ -1545,14 +1553,15 @@ ${(this._config && this._config.show_kabola) ? `
 
 
 
-    // Walstroom socket knop
+    // Walstroom socket knop (configureerbaar, valt terug op Eriks eigen socket)
+    const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
     const walSocketBtn = this.shadowRoot.getElementById('wal-socket-btn');
     if (walSocketBtn && this._hass) {
       walSocketBtn.onclick = (e) => {
         e.stopPropagation();
-        const aan = this._hass.states['switch.walstroom_socket_1']?.state === 'on';
+        const aan = this._hass.states[walstroomSwitchEntity]?.state === 'on';
         this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
-          entity_id: 'switch.walstroom_socket_1'
+          entity_id: walstroomSwitchEntity
         });
       };
     }
@@ -1582,14 +1591,15 @@ ${(this._config && this._config.show_kabola) ? `
       };
     }
 
-    // Walstroom override knop
+    // Walstroom override knop (configureerbaar, valt terug op Eriks eigen helper)
+    const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walOverrideBtn = this.shadowRoot.getElementById('wal-override-btn');
     if (walOverrideBtn && this._hass) {
       walOverrideBtn.onclick = (e) => {
         e.stopPropagation();
-        const aan = this._hass.states['input_boolean.walstroom_override']?.state === 'on';
+        const aan = this._hass.states[walstroomOverrideEntity]?.state === 'on';
         this._hass.callService('input_boolean', aan ? 'turn_off' : 'turn_on', {
-          entity_id: 'input_boolean.walstroom_override'
+          entity_id: walstroomOverrideEntity
         });
       };
     }
@@ -2037,8 +2047,10 @@ class FinallySkyCardMobile extends HTMLElement {
     const kabolaHuidigeTemp  = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
     const gridActive  = s(quattroInputPowerL1Entity) > 20;
     const gridSpanning = parseFloat(acInV) > 100;
-    const walSocketAan = st('switch.walstroom_socket_1') === 'on';
-    const walOverride  = st('input_boolean.walstroom_override') === 'on';
+    const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
+    const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
+    const walSocketAan = st(walstroomSwitchEntity) === 'on';
+    const walOverride  = st(walstroomOverrideEntity) === 'on';
     const knmiCode   = st('sensor.knmi_weercode');
     const walstroom  = s('sensor.walstroom_verbruik_watt').toFixed(0);
 
@@ -3100,21 +3112,21 @@ ${(this._config && this._config.show_kabola) ? `
       mWiPopup.onclick = (e) => { if (e.target === mWiPopup) { this._walInstPopupOpen = false; mWiPopup.style.display = 'none'; } };
     }
 
-    // Walstroom socket
+    // Walstroom socket (configureerbaar, valt terug op Eriks eigen socket — zie declaratie boven in deze functie)
     const mWalSocketBtn = this.shadowRoot.getElementById('m-wal-socket-btn');
     if (mWalSocketBtn && this._hass) {
       mWalSocketBtn.onclick = () => {
-        const aan = this._hass.states['switch.walstroom_socket_1']?.state === 'on';
-        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', { entity_id: 'switch.walstroom_socket_1' });
+        const aan = this._hass.states[walstroomSwitchEntity]?.state === 'on';
+        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', { entity_id: walstroomSwitchEntity });
       };
     }
 
-    // Walstroom override
+    // Walstroom override (configureerbaar, valt terug op Eriks eigen helper)
     const mWalOverrideBtn = this.shadowRoot.getElementById('m-wal-override-btn');
     if (mWalOverrideBtn && this._hass) {
       mWalOverrideBtn.onclick = () => {
-        const aan = this._hass.states['input_boolean.walstroom_override']?.state === 'on';
-        this._hass.callService('input_boolean', aan ? 'turn_off' : 'turn_on', { entity_id: 'input_boolean.walstroom_override' });
+        const aan = this._hass.states[walstroomOverrideEntity]?.state === 'on';
+        this._hass.callService('input_boolean', aan ? 'turn_off' : 'turn_on', { entity_id: walstroomOverrideEntity });
       };
     }
   }
