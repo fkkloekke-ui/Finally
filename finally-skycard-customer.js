@@ -1,9 +1,14 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.2.3
+   Versie: 3.2.4
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.2.4 — Bevestigingspopup toegevoegd bij handmatig inschakelen van
+   walstroom én bij handmatig starten van de generator (kiosk + mobiel), om
+   per ongeluk aan-/uitzetten te voorkomen. Uitschakelen/stoppen blijft
+   direct werken, geen bevestiging nodig.
 
    v3.2.3 — Walstroom-tegel/override zijn nu configureerbaar via
    walstroom_switch_entity en walstroom_override_entity (this._config), met
@@ -39,8 +44,8 @@ class FinallySkyCard extends HTMLElement {
     this._walLimitPopupOpen = false;
     this._walLimitVal = 16;
     this._walInstPopupOpen = false;
-
-    // Schaal het 1920x1080-ontwerp-canvas mee bij elke resize van het venster
+    this._walConfirmPopupOpen = false;
+    this._genConfirmPopupOpen = false;
     this._resizeHandler = () => this._applyScale();
     window.addEventListener('resize', this._resizeHandler);
   }
@@ -1414,6 +1419,28 @@ ${(this._config && this._config.show_wind) ? `
     </div>
   </div>
 
+  <div id="wal-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,153,0,0.45);border-radius:20px;padding:32px 40px;min-width:340px;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+      <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">WALSTROOM INSCHAKELEN</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je walstroom<br>handmatig wilt inschakelen?</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <div id="wal-confirm-nee" style="cursor:pointer;padding:12px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="wal-confirm-ja" style="cursor:pointer;padding:12px 28px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:15px;color:#ffaa33;font-weight:700">Ja, inschakelen</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="gen-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,90,60,0.5);border-radius:20px;padding:32px 40px;min-width:340px;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+      <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">GENERATOR STARTEN</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je de generator<br>handmatig wilt starten?</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <div id="gen-confirm-nee" style="cursor:pointer;padding:12px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="gen-confirm-ja" style="cursor:pointer;padding:12px 28px;background:rgba(255,90,60,0.2);border:0.5px solid rgba(255,90,60,0.55);border-radius:12px;font-size:15px;color:#ff8866;font-weight:700">Ja, starten</div>
+      </div>
+    </div>
+  </div>
+
   <div id="verw-popup" style="display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,0.6);backdrop-filter:blur(6px);align-items:center;justify-content:center">
     <div style="background:rgba(8,18,52,0.96);border:1px solid rgba(255,100,50,0.4);border-radius:20px;padding:32px 40px;min-width:340px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,0.6)">
       <div style="font-size:13px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:8px">VERWARMING</div>
@@ -1555,26 +1582,64 @@ ${(this._config && this._config.show_kabola) ? `
 
     // Walstroom socket knop (configureerbaar, valt terug op Eriks eigen socket)
     const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
+    const walConfirmPopup = this.shadowRoot.getElementById('wal-confirm-popup');
+    const walConfirmJa = this.shadowRoot.getElementById('wal-confirm-ja');
+    const walConfirmNee = this.shadowRoot.getElementById('wal-confirm-nee');
+    if (walConfirmPopup) {
+      if (this._walConfirmPopupOpen) walConfirmPopup.style.display = 'flex';
+      const sluitConfirm = () => { this._walConfirmPopupOpen = false; walConfirmPopup.style.display = 'none'; };
+      if (walConfirmNee) walConfirmNee.onclick = (e) => { e.stopPropagation(); sluitConfirm(); };
+      walConfirmPopup.onclick = (e) => { if (e.target === walConfirmPopup) sluitConfirm(); };
+      if (walConfirmJa) walConfirmJa.onclick = (e) => {
+        e.stopPropagation();
+        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: walstroomSwitchEntity });
+        sluitConfirm();
+      };
+    }
     const walSocketBtn = this.shadowRoot.getElementById('wal-socket-btn');
     if (walSocketBtn && this._hass) {
       walSocketBtn.onclick = (e) => {
         e.stopPropagation();
         const aan = this._hass.states[walstroomSwitchEntity]?.state === 'on';
-        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
-          entity_id: walstroomSwitchEntity
-        });
+        if (aan) {
+          // Uitschakelen mag direct, geen bevestiging nodig
+          this._hass.callService('switch', 'turn_off', { entity_id: walstroomSwitchEntity });
+        } else {
+          // Inschakelen: eerst bevestiging vragen om per ongeluk aanzetten te voorkomen
+          this._walConfirmPopupOpen = true;
+          if (walConfirmPopup) walConfirmPopup.style.display = 'flex';
+        }
       };
     }
 
     // Generator start/stop knop
+    const genConfirmPopup = this.shadowRoot.getElementById('gen-confirm-popup');
+    const genConfirmJa = this.shadowRoot.getElementById('gen-confirm-ja');
+    const genConfirmNee = this.shadowRoot.getElementById('gen-confirm-nee');
+    if (genConfirmPopup) {
+      if (this._genConfirmPopupOpen) genConfirmPopup.style.display = 'flex';
+      const sluitGenConfirm = () => { this._genConfirmPopupOpen = false; genConfirmPopup.style.display = 'none'; };
+      if (genConfirmNee) genConfirmNee.onclick = (e) => { e.stopPropagation(); sluitGenConfirm(); };
+      genConfirmPopup.onclick = (e) => { if (e.target === genConfirmPopup) sluitGenConfirm(); };
+      if (genConfirmJa) genConfirmJa.onclick = (e) => {
+        e.stopPropagation();
+        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: 'switch.generator_start_stop_manual_start' });
+        sluitGenConfirm();
+      };
+    }
     const genToggleBtn = this.shadowRoot.getElementById('gen-toggle-btn');
     if (genToggleBtn && this._hass) {
       genToggleBtn.onclick = (e) => {
         e.stopPropagation();
         const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
-        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
-          entity_id: 'switch.generator_start_stop_manual_start'
-        });
+        if (aan) {
+          // Stoppen mag direct, geen bevestiging nodig
+          this._hass.callService('switch', 'turn_off', { entity_id: 'switch.generator_start_stop_manual_start' });
+        } else {
+          // Starten: eerst bevestiging vragen om per ongeluk starten te voorkomen
+          this._genConfirmPopupOpen = true;
+          if (genConfirmPopup) genConfirmPopup.style.display = 'flex';
+        }
       };
     }
 
@@ -1817,6 +1882,8 @@ class FinallySkyCardMobile extends HTMLElement {
     this._energiePopupOpen = false;
     this._walLimitPopupOpen = false;
     this._walInstPopupOpen = false;
+    this._walConfirmPopupOpen = false;
+    this._genConfirmPopupOpen = false;
     this._walLimitVal = 16;
   }
 
@@ -2832,6 +2899,28 @@ ${(this._config && this._config.show_kabola) ? `
     </div>
   </div>
 
+  <div id="m-wal-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,153,0,0.45);border-radius:20px;padding:28px;width:min(320px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">WALSTROOM INSCHAKELEN</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je walstroom<br>handmatig wilt inschakelen?</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <div id="m-wal-confirm-nee" style="cursor:pointer;padding:12px 24px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:14px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="m-wal-confirm-ja" style="cursor:pointer;padding:12px 24px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:14px;color:#ffaa33;font-weight:700">Ja, inschakelen</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="m-gen-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,90,60,0.5);border-radius:20px;padding:28px;width:min(320px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">GENERATOR STARTEN</div>
+      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je de generator<br>handmatig wilt starten?</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <div id="m-gen-confirm-nee" style="cursor:pointer;padding:12px 24px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:14px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="m-gen-confirm-ja" style="cursor:pointer;padding:12px 24px;background:rgba(255,90,60,0.2);border:0.5px solid rgba(255,90,60,0.55);border-radius:12px;font-size:14px;color:#ff8866;font-weight:700">Ja, starten</div>
+      </div>
+    </div>
+  </div>
+
   <!-- Walstroom limiet popup -->
   <div id="m-wal-limit-popup" style="display:none;position:fixed;inset:0;z-index:101;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(0,170,255,0.4);border-radius:20px;padding:32px;width:min(340px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
@@ -2950,14 +3039,31 @@ ${(this._config && this._config.show_kabola) ? `
     const verwknop  = this.shadowRoot.getElementById('m-verwknop');
 
     // Generator start/stop knop
+    const mGenConfirmPopup = this.shadowRoot.getElementById('m-gen-confirm-popup');
+    const mGenConfirmJa = this.shadowRoot.getElementById('m-gen-confirm-ja');
+    const mGenConfirmNee = this.shadowRoot.getElementById('m-gen-confirm-nee');
+    if (mGenConfirmPopup) {
+      if (this._genConfirmPopupOpen) mGenConfirmPopup.style.display = 'flex';
+      const mSluitGenConfirm = () => { this._genConfirmPopupOpen = false; mGenConfirmPopup.style.display = 'none'; };
+      if (mGenConfirmNee) mGenConfirmNee.onclick = (e) => { e.stopPropagation(); mSluitGenConfirm(); };
+      mGenConfirmPopup.onclick = (e) => { if (e.target === mGenConfirmPopup) mSluitGenConfirm(); };
+      if (mGenConfirmJa) mGenConfirmJa.onclick = (e) => {
+        e.stopPropagation();
+        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: 'switch.generator_start_stop_manual_start' });
+        mSluitGenConfirm();
+      };
+    }
     const mGenToggle = this.shadowRoot.getElementById('m-gen-toggle');
     if (mGenToggle && this._hass) {
       mGenToggle.onclick = (e) => {
         e.stopPropagation();
         const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
-        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', {
-          entity_id: 'switch.generator_start_stop_manual_start'
-        });
+        if (aan) {
+          this._hass.callService('switch', 'turn_off', { entity_id: 'switch.generator_start_stop_manual_start' });
+        } else {
+          this._genConfirmPopupOpen = true;
+          if (mGenConfirmPopup) mGenConfirmPopup.style.display = 'flex';
+        }
       };
     }
 
@@ -3113,11 +3219,30 @@ ${(this._config && this._config.show_kabola) ? `
     }
 
     // Walstroom socket (configureerbaar, valt terug op Eriks eigen socket — zie declaratie boven in deze functie)
+    const mWalConfirmPopup = this.shadowRoot.getElementById('m-wal-confirm-popup');
+    const mWalConfirmJa = this.shadowRoot.getElementById('m-wal-confirm-ja');
+    const mWalConfirmNee = this.shadowRoot.getElementById('m-wal-confirm-nee');
+    if (mWalConfirmPopup) {
+      if (this._walConfirmPopupOpen) mWalConfirmPopup.style.display = 'flex';
+      const mSluitConfirm = () => { this._walConfirmPopupOpen = false; mWalConfirmPopup.style.display = 'none'; };
+      if (mWalConfirmNee) mWalConfirmNee.onclick = (e) => { e.stopPropagation(); mSluitConfirm(); };
+      mWalConfirmPopup.onclick = (e) => { if (e.target === mWalConfirmPopup) mSluitConfirm(); };
+      if (mWalConfirmJa) mWalConfirmJa.onclick = (e) => {
+        e.stopPropagation();
+        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: walstroomSwitchEntity });
+        mSluitConfirm();
+      };
+    }
     const mWalSocketBtn = this.shadowRoot.getElementById('m-wal-socket-btn');
     if (mWalSocketBtn && this._hass) {
       mWalSocketBtn.onclick = () => {
         const aan = this._hass.states[walstroomSwitchEntity]?.state === 'on';
-        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', { entity_id: walstroomSwitchEntity });
+        if (aan) {
+          this._hass.callService('switch', 'turn_off', { entity_id: walstroomSwitchEntity });
+        } else {
+          this._walConfirmPopupOpen = true;
+          if (mWalConfirmPopup) mWalConfirmPopup.style.display = 'flex';
+        }
       };
     }
 
