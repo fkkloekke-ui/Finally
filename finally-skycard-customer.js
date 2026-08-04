@@ -1,9 +1,17 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.4
+   Versie: 3.3.5
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.5 — Generator handmatig start/stop-knop (kiosk + mobiel) is nu
+   configureerbaar via generator_switch_entity (this._config), met
+   fallback op Eriks eigen switch.generator_start_stop_manual_start.
+   Zonder dit config-veld werkte de knop nergens anders dan bij Erik zelf
+   (zelfde patroon als walstroom_switch_entity in v3.2.3). De overige
+   generator-sensoren (run_state, runtime vandaag/totaal, service counter)
+   staan nog hardcoded — volgt bij de bredere audit-refactor (punt B).
 
    v3.3.4 — Nieuwe optionele "Machinekamer"-tegel (mobiel) in de
    Weer & omgeving-sectie: toont temperatuur van een configureerbare sensor
@@ -939,7 +947,8 @@ class FinallySkyCard extends HTMLElement {
     // ── Extra ──
     const genState   = hass ? st('sensor.generator_start_stop_run_state') : '--';
     const genActive  = genState === 'running';
-    const genManualOn    = hass ? st('switch.generator_start_stop_manual_start') : 'off';
+    const generatorSwitchEntity = (this._config && this._config.generator_switch_entity) || 'switch.generator_start_stop_manual_start';
+    const genManualOn    = hass ? st(generatorSwitchEntity) : 'off';
     const genRuntimeToday = hass ? s('sensor.generator_start_stop_today_runtime').toFixed(1) : '--';
     const genRuntimeTotal = hass ? s('sensor.generator_start_stop_total_runtime').toFixed(0) : '--';
     const kabolaEntity     = (this._config && this._config.kabola_climate_entity) || 'climate.kabola';
@@ -1633,7 +1642,7 @@ ${(this._config && this._config.show_wind) ? `
     <div class="stat" style="flex:${(this._config && this._config.generator_flex) || 1};border-color:rgba(${genActive?'0,255,100':'80,80,120'},0.2);display:flex;flex-direction:column;gap:4px">
       <div style="display:flex;align-items:center;justify-content:space-between">
         <div class="sl" style="margin:0">GENERATOR</div>
-        <div id="gen-toggle-btn" data-entity="switch.generator_start_stop_manual_start" data-state="${genManualOn}"
+        <div id="gen-toggle-btn" data-entity="${generatorSwitchEntity}" data-state="${genManualOn}"
              style="cursor:pointer;width:38px;height:20px;border-radius:10px;background:${genManualOn==='on'?'#00cc66':'rgba(255,255,255,0.15)'};position:relative;transition:background 0.2s">
           <div style="position:absolute;top:2px;left:${genManualOn==='on'?'20px':'2px'};width:16px;height:16px;border-radius:50%;background:#fff;transition:left 0.2s"></div>
         </div>
@@ -1725,7 +1734,8 @@ ${(this._config && this._config.show_kabola) ? `
       };
     }
 
-    // Generator start/stop knop
+    // Generator start/stop knop (configureerbaar, valt terug op Eriks eigen manual-start switch)
+    const generatorSwitchEntity = (this._config && this._config.generator_switch_entity) || 'switch.generator_start_stop_manual_start';
     const genConfirmPopup = this.shadowRoot.getElementById('gen-confirm-popup');
     const genConfirmJa = this.shadowRoot.getElementById('gen-confirm-ja');
     const genConfirmNee = this.shadowRoot.getElementById('gen-confirm-nee');
@@ -1736,7 +1746,7 @@ ${(this._config && this._config.show_kabola) ? `
       genConfirmPopup.onclick = (e) => { if (e.target === genConfirmPopup) sluitGenConfirm(); };
       if (genConfirmJa) genConfirmJa.onclick = (e) => {
         e.stopPropagation();
-        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: 'switch.generator_start_stop_manual_start' });
+        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: generatorSwitchEntity });
         sluitGenConfirm();
       };
     }
@@ -1744,10 +1754,10 @@ ${(this._config && this._config.show_kabola) ? `
     if (genToggleBtn && this._hass) {
       genToggleBtn.onclick = (e) => {
         e.stopPropagation();
-        const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
+        const aan = this._hass.states[generatorSwitchEntity]?.state === 'on';
         if (aan) {
           // Stoppen mag direct, geen bevestiging nodig
-          this._hass.callService('switch', 'turn_off', { entity_id: 'switch.generator_start_stop_manual_start' });
+          this._hass.callService('switch', 'turn_off', { entity_id: generatorSwitchEntity });
         } else {
           // Starten: eerst bevestiging vragen om per ongeluk starten te voorkomen
           this._genConfirmPopupOpen = true;
@@ -2240,7 +2250,8 @@ class FinallySkyCardMobile extends HTMLElement {
     // ── Overig ──
     const genActive  = st('sensor.generator_start_stop_run_state') === 'running';
     const genState   = st('sensor.generator_start_stop_run_state');
-    const genManualOn    = st('switch.generator_start_stop_manual_start');
+    const generatorSwitchEntity = (this._config && this._config.generator_switch_entity) || 'switch.generator_start_stop_manual_start';
+    const genManualOn    = st(generatorSwitchEntity);
     const genRuntimeToday = s('sensor.generator_start_stop_today_runtime').toFixed(1);
     const genRuntimeTotal = s('sensor.generator_start_stop_total_runtime').toFixed(0);
     const genServiceCounter = s('sensor.generator_start_stop_service_counter').toFixed(0);
@@ -2993,7 +3004,7 @@ ${(this._config && this._config.show_generator) ? `
 
     <!-- Start/stop knop -->
     <div class="card-grid" style="margin-bottom:8px">
-      <div class="touch-btn" id="m-gen-toggle" data-entity="switch.generator_start_stop_manual_start"
+      <div class="touch-btn" id="m-gen-toggle" data-entity="${generatorSwitchEntity}"
            style="border-color:rgba(0,255,136,${genManualOn==='on'?'0.5':'0.2'});background:${genManualOn==='on'?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.04)'}">
         <div style="font-size:22px;margin-bottom:4px">⚡</div>
         <div class="lbl">GENERATOR</div>
@@ -3200,7 +3211,7 @@ ${(this._config && this._config.show_generator) ? `
       mGenConfirmPopup.onclick = (e) => { if (e.target === mGenConfirmPopup) mSluitGenConfirm(); };
       if (mGenConfirmJa) mGenConfirmJa.onclick = (e) => {
         e.stopPropagation();
-        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: 'switch.generator_start_stop_manual_start' });
+        if (this._hass) this._hass.callService('switch', 'turn_on', { entity_id: generatorSwitchEntity });
         mSluitGenConfirm();
       };
     }
@@ -3208,9 +3219,9 @@ ${(this._config && this._config.show_generator) ? `
     if (mGenToggle && this._hass) {
       mGenToggle.onclick = (e) => {
         e.stopPropagation();
-        const aan = this._hass.states['switch.generator_start_stop_manual_start']?.state === 'on';
+        const aan = this._hass.states[generatorSwitchEntity]?.state === 'on';
         if (aan) {
-          this._hass.callService('switch', 'turn_off', { entity_id: 'switch.generator_start_stop_manual_start' });
+          this._hass.callService('switch', 'turn_off', { entity_id: generatorSwitchEntity });
         } else {
           this._genConfirmPopupOpen = true;
           if (mGenConfirmPopup) mGenConfirmPopup.style.display = 'flex';
