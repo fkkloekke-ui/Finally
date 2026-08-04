@@ -1,9 +1,29 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.6
+   Versie: 3.3.7
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.7 — Punt B (audit-refactor), afronding blok 6 + weer-entity:
+   - weather_entity is nu configureerbaar (11 plekken hardcoded op Eriks
+     eigen weather.forecast_thuis — dit domein miste de vorige audit-scan
+     volledig). Fallback blijft weather.forecast_thuis.
+   - sky_card_image-afhankelijkheid volledig verwijderd: de dag/nacht +
+     weertype → achtergrond-PNG-logica (Eriks eigen templates.yaml-sensor)
+     is nu rechtstreeks in de kaart gebouwd (nieuwe functie
+     finallySkyImagePath), op basis van het ingebouwde sun.sun-elevatie-
+     attribuut + de (nu configureerbare) weather_entity. Klanten hoeven
+     dus geen losse template-helper meer te bouwen — scheelt een stap in
+     de installatiehandleiding. Bestandsnamen gebruiken de bestaande
+     klant-conventie (/local/finally-card/<naam>.png, geen "sky-" prefix).
+   - Dode code opgeruimd: p2000/scheepvaart-variabelen (input_text.laatste_
+     p2000_bericht, sensor.scheepvaart_tekst) werden nog berekend maar
+     nergens meer gerenderd — restant van een allang opgegeven feature.
+     Verwijderd uit kiosk + mobiel. Op MS Finally zelf bleek scheepvaart_
+     tekst al niet meer te bestaan; sensor.p2000 (platform "p2000") staat
+     daar nog wel, maar buiten configuration.yaml/templates.yaml om — komt
+     vermoedelijk uit een oude custom_component, nog niet gelokaliseerd.
 
    v3.3.6 — Punt B (audit-refactor), eerste tranche: 26 entiteiten die nog
    hardcoded stonden op Eriks eigen namen zijn nu configureerbaar via
@@ -141,6 +161,30 @@ const MPPT_STATE_NL = {
 function mpptStateLabel(raw) {
   if (!raw || raw === '--') return '--';
   return MPPT_STATE_NL[raw] || raw;
+}
+
+// Achtergrondafbeelding op basis van weertype + zonshoogte + uur van de dag.
+// Zelfde logica als Eriks eigen "sky_card_image" template-sensor (templates.yaml),
+// nu rechtstreeks in de kaart zodat klanten geen losse helper-sensor meer hoeven te
+// bouwen. Bestandsnamen volgen de klant-conventie: /local/finally-card/<naam>.png
+// (geen "sky-" prefix — dat was alleen Eriks eigen padnaam).
+function finallySkyImagePath(condition, elev, hour) {
+  const isDay = elev >= 0;
+  if (!isDay) {
+    if (condition === 'sunny' || condition === 'clear-night') return '/local/finally-card/night-clear.png';
+    if (condition === 'cloudy' || condition === 'overcast') return '/local/finally-card/cloudy-night.png';
+    return '/local/finally-card/partlycloudy-night.png';
+  }
+  if (elev < 6 && hour < 12) return '/local/finally-card/clear-dawn.png';
+  if (elev < 6 && hour >= 12) return '/local/finally-card/clear-dusk.png';
+  if (condition === 'sunny' || condition === 'clear-night') return '/local/finally-card/clear-day.png';
+  if (condition === 'cloudy' || condition === 'overcast') return '/local/finally-card/cloudy-day.png';
+  if (condition === 'partlycloudy') return '/local/finally-card/partlycloudy-day.png';
+  if (condition === 'rainy' || condition === 'pouring') return '/local/finally-card/rainy-day.png';
+  if (condition === 'lightning' || condition === 'lightning-rainy') return '/local/finally-card/thunderstorm.png';
+  if (condition === 'snowy' || condition === 'snowy-rainy') return '/local/finally-card/snowy-day.png';
+  if (condition === 'fog') return '/local/finally-card/fog-day.png';
+  return '/local/finally-card/partlycloudy-day.png';
 }
 
 class FinallySkyCard extends HTMLElement {
@@ -738,24 +782,25 @@ class FinallySkyCard extends HTMLElement {
 
   async _loadForecast() {
     if (!this._hass) return;
+    const weatherEntity = (this._config && this._config.weather_entity) || 'weather.forecast_thuis';
     try {
       const result = await this._hass.callWS({
         type: 'weather/get_forecasts',
-        entity_ids: ['weather.forecast_thuis'],
+        entity_ids: [weatherEntity],
         forecast_type: 'daily',
       });
-      if (result && result['weather.forecast_thuis']?.forecast) {
-        this._forecast = result['weather.forecast_thuis'].forecast;
+      if (result && result[weatherEntity]?.forecast) {
+        this._forecast = result[weatherEntity].forecast;
         this._render();
       }
     } catch(e) {
       try {
         const result2 = await this._hass.callService('weather', 'get_forecasts', {
-          entity_id: 'weather.forecast_thuis',
+          entity_id: weatherEntity,
           type: 'daily',
         }, undefined, undefined, true);
-        if (result2?.response?.['weather.forecast_thuis']?.forecast) {
-          this._forecast = result2.response['weather.forecast_thuis'].forecast;
+        if (result2?.response?.[weatherEntity]?.forecast) {
+          this._forecast = result2.response[weatherEntity].forecast;
           this._render();
         }
       } catch(e2) { console.warn('Finally SkyCard: forecast laden mislukt', e2); }
@@ -893,6 +938,7 @@ class FinallySkyCard extends HTMLElement {
     const waterhoogteVerwachtEntity = (this._config && this._config.waterhoogte_verwacht_entity) || 'sensor.hasselt_zwarte_water_waterhoogte_verwacht';
     const weerTekstEntity = (this._config && this._config.weer_tekst_entity) || 'sensor.knmi_tekst';
     const weerCodeEntity = (this._config && this._config.weer_code_entity) || 'sensor.knmi_weercode';
+    const weatherEntity = (this._config && this._config.weather_entity) || 'weather.forecast_thuis';
     if (!this.shadowRoot) return;
     const s = this._s.bind(this);
     const st = this._st.bind(this);
@@ -1008,7 +1054,7 @@ class FinallySkyCard extends HTMLElement {
     // ── Omgeving ──
     const tempBinnen = hass ? s(indoorTempEntity).toFixed(1) : '--';
     const vocht      = hass ? s(indoorHumidityEntity).toFixed(0) : '--';
-    const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
+    const _wAttr     = hass ? hass.states[weatherEntity]?.attributes : null;
     const vochtBuiten = _wAttr ? (_wAttr.humidity ?? '--') : '--';
     const windKm     = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
     const windUnitMs = (this._config && this._config.wind_unit === 'ms');
@@ -1020,11 +1066,9 @@ class FinallySkyCard extends HTMLElement {
     const windBft    = _wAttr ? (windKm < 1 ? 0 : windKm < 6 ? 1 : windKm < 12 ? 2 : windKm < 20 ? 3 : windKm < 29 ? 4 : windKm < 39 ? 5 : windKm < 50 ? 6 : windKm < 62 ? 7 : windKm < 75 ? 8 : windKm < 89 ? 9 : windKm < 103 ? 10 : windKm < 117 ? 11 : 12) : '--';
     const waterhoogte     = hass ? s(waterhoogteEntity).toFixed(0) : '--';
     const waterhoogteVerw = hass ? s(waterhoogteVerwachtEntity).toFixed(0) : '--';
-    const p2000      = hass ? st('input_text.laatste_p2000_bericht') : '--';
-    const scheepvaart = hass ? st('sensor.scheepvaart_tekst') : '--';
     const knmiCode   = hass ? st(weerCodeEntity) : 'Groen';
-    const tempBuiten = hass ? (hass.states['weather.forecast_thuis']?.attributes?.temperature ?? '--') : '--';
-    const wcond      = hass ? st('weather.forecast_thuis') : '--';
+    const tempBuiten = hass ? (hass.states[weatherEntity]?.attributes?.temperature ?? '--') : '--';
+    const wcond      = hass ? st(weatherEntity) : '--';
     const wIcon      = {'sunny':'☀️','partlycloudy':'⛅','cloudy':'☁️','overcast':'☁️','rainy':'🌧️','pouring':'🌧️','lightning':'⛈️','lightning-rainy':'⛈️','snowy':'❄️','snowy-rainy':'🌨️','fog':'🌫️','windy':'💨','windy-variant':'💨','clear-night':'🌙'}[wcond] || '🌡️';
     const knmiTekst  = hass ? st(weerTekstEntity) : '';
 
@@ -1106,8 +1150,7 @@ class FinallySkyCard extends HTMLElement {
     const gridX1 = 390, gridY1 = 694;
 
     // Achtergrond
-    const _skyRaw = hass ? (hass.states['sensor.sky_card_image']?.state ?? '--') : '--';
-    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/local/finally-card/clear-day.png';
+    const skyImg  = hass ? finallySkyImagePath(wcond, parseFloat(_sA.elevation ?? 0), new Date().getHours()) : '/local/finally-card/clear-day.png';
 
 
     // Flows actief
@@ -2303,9 +2346,10 @@ class FinallySkyCardMobile extends HTMLElement {
     const engineRoomFrostTemp = (this._config && this._config.engine_room_frost_temp) != null ? this._config.engine_room_frost_temp : 5;
     const engineRoomTemp = showEngineRoomTemp ? s(engineRoomTempEntity) : 0;
     const engineRoomFrostRisk = showEngineRoomTemp && engineRoomTemp <= engineRoomFrostTemp;
-    const wcond      = hass ? st('weather.forecast_thuis') : '--';
-    const tempBuiten = hass ? (hass.states['weather.forecast_thuis']?.attributes?.temperature ?? '--') : '--';
-    const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
+    const weatherEntity = (this._config && this._config.weather_entity) || 'weather.forecast_thuis';
+    const wcond      = hass ? st(weatherEntity) : '--';
+    const tempBuiten = hass ? (hass.states[weatherEntity]?.attributes?.temperature ?? '--') : '--';
+    const _wAttr     = hass ? hass.states[weatherEntity]?.attributes : null;
     const windKmM    = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
     const _windBearM = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const _windDirsM = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
@@ -2356,13 +2400,12 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── Weer / forecast ──
     const knmiTekst    = st(weerTekstEntity);
-    const scheepvaart  = st('sensor.scheepvaart_tekst');
     const windDeg      = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const windDirs     = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
     const windKompas   = windDirs[Math.round(windDeg / 22.5) % 16];
 
     // Weer forecast uit Open-Meteo
-    const wxState      = hass ? hass.states['weather.forecast_thuis'] : null;
+    const wxState      = hass ? hass.states[weatherEntity] : null;
     const wxCurrent    = wxState ? wxState.state : '--';
     const wxTemp       = wxState && wxState.attributes.temperature != null ? wxState.attributes.temperature : '--';
     const wxForecast   = (wxState && wxState.attributes.forecast) || [];
@@ -2388,8 +2431,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const datum = nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
 
     // ── Achtergrond ──
-    const _skyRaw = st('sensor.sky_card_image');
-    const skyImg  = (_skyRaw && _skyRaw !== 'unknown' && _skyRaw !== 'unavailable' && _skyRaw !== '--') ? _skyRaw : '/local/finally-card/clear-day.png';
+    const skyImg  = finallySkyImagePath(wcond, parseFloat(sunElev), new Date().getHours());
 
 
     // ── Sparkline ──
