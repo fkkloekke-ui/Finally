@@ -1,9 +1,35 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.5
+   Versie: 3.3.6
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.6 — Punt B (audit-refactor), eerste tranche: 26 entiteiten die nog
+   hardcoded stonden op Eriks eigen namen zijn nu configureerbaar via
+   this._config, met fallback op Eriks eigen entiteiten:
+   - JK BMS (10): bms1/bms2_cell_min/max_entity, bms1/bms2_soc_entity,
+     bms1/bms2_cycles_entity, bms1/bms2_mos_temp_entity
+   - BMS temp-helpers (2): bms1/bms2_temp_netjes_entity
+   - Binnenklimaat (2): indoor_temp_entity, indoor_humidity_entity —
+     show_indoor_climate bestond al sinds v3.3.2, maar verborg alleen de
+     tegel; de onderliggende sensor was nog steeds Eriks eigen ewelink-
+     sensor. Nu pas echt configureerbaar.
+   - Verwarming/douchepomp mobiel (2): heating_climate_entity,
+     douchepomp_switch_entity — zelfde verhaal: hide_douchepomp bestond
+     al, de entity zelf niet.
+   - Locatie/weer (7): waterhoogte_entity, waterhoogte_verwacht_entity,
+     weer_tekst_entity, weer_code_entity, sun_next_rising_entity,
+     sun_next_setting_entity, wind_direction_entity
+   - Walstroom-instellingen-popup (3): walstroom_soc_aan_entity,
+     walstroom_soc_uit_entity, walstroom_zon_drempel_entity
+   Bewust NIET aangepast: de gx_device_* en generator_start_stop_*
+   entiteiten (GX-kern + generator-sensoren, ~14 stuks) — geverifieerd bij
+   Michiel dat de victron_gx/mqtt-integratie deze altijd met identieke
+   naam aanmaakt (vaste device-naam, geen serienummer), dus deze zijn al
+   universeel en hoeven niet configureerbaar te worden. sky_card_image en
+   scheepvaart_tekst nog open — eerst bepalen of dit config-opties worden
+   of Erik-only blijven.
 
    v3.3.5 — Generator handmatig start/stop-knop (kiosk + mobiel) is nu
    configureerbaar via generator_switch_entity (this._config), met
@@ -496,6 +522,9 @@ class FinallySkyCard extends HTMLElement {
   }
 
   _fillPopupData(id, container) {
+    const indoorTempEntity = (this._config && this._config.indoor_temp_entity) || 'sensor.ewelink_snzb_02p_temperatuur';
+    const indoorHumidityEntity = (this._config && this._config.indoor_humidity_entity) || 'sensor.ewelink_snzb_02p_luchtvochtigheid';
+    const windDirectionEntity = (this._config && this._config.wind_direction_entity) || 'sensor.windrichting';
     const hass = this._hass;
     if (!hass) return;
     const _s  = (e) => { const v = parseFloat(hass.states[e]?.state); return isNaN(v) ? 0 : v; };
@@ -640,9 +669,9 @@ class FinallySkyCard extends HTMLElement {
       });
     }
     else if (id === 'klimaat') {
-      T('kp-tin',_s('sensor.ewelink_snzb_02p_temperatuur').toFixed(1)+'°C');
-      T('kp-hum',_s('sensor.ewelink_snzb_02p_luchtvochtigheid').toFixed(0)+'%');
-      T('kp-wdir',_st('sensor.windrichting'));
+      T('kp-tin',_s(indoorTempEntity).toFixed(1)+'°C');
+      T('kp-hum',_s(indoorHumidityEntity).toFixed(0)+'%');
+      T('kp-wdir',_st(windDirectionEntity));
     }
     else if (id === 'systeem') {
       T('syp-fw',_st('sensor.gx_device_installed_version'));
@@ -694,9 +723,10 @@ class FinallySkyCard extends HTMLElement {
   }
 
   _loadWaterForecast() {
+    const waterhoogteVerwachtEntity = (this._config && this._config.waterhoogte_verwacht_entity) || 'sensor.hasselt_zwarte_water_waterhoogte_verwacht';
     if (!this._hass) return;
     try {
-      const fc = this._hass.states['sensor.hasselt_zwarte_water_waterhoogte_verwacht']?.attributes?.Forecast;
+      const fc = this._hass.states[waterhoogteVerwachtEntity]?.attributes?.Forecast;
       if (Array.isArray(fc) && fc.length) {
         this._waterForecast = fc
           .map(p => ({ t: new Date(p.Time).getTime(), v: parseFloat(p.Value) }))
@@ -845,6 +875,24 @@ class FinallySkyCard extends HTMLElement {
   }
 
   _render() {
+    const bms1CellMinEntity = (this._config && this._config.bms1_cell_min_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_min';
+    const bms1CellMaxEntity = (this._config && this._config.bms1_cell_max_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_max';
+    const bms1SocEntity = (this._config && this._config.bms1_soc_entity) || 'sensor.jk_bms_1_jk_bms_1_soc';
+    const bms1CyclesEntity = (this._config && this._config.bms1_cycles_entity) || 'sensor.jk_bms_1_jk_bms_1_num_cycles';
+    const bms1MosTempEntity = (this._config && this._config.bms1_mos_temp_entity) || 'sensor.jk_bms_1_jk_bms_1_mos_temperature';
+    const bms2CellMinEntity = (this._config && this._config.bms2_cell_min_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_min';
+    const bms2CellMaxEntity = (this._config && this._config.bms2_cell_max_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_max';
+    const bms2SocEntity = (this._config && this._config.bms2_soc_entity) || 'sensor.jk_bms_2_jk_bms_2_soc';
+    const bms2CyclesEntity = (this._config && this._config.bms2_cycles_entity) || 'sensor.jk_bms_2_jk_bms_2_num_cycles';
+    const bms2MosTempEntity = (this._config && this._config.bms2_mos_temp_entity) || 'sensor.jk_bms_2_jk_bms_2_mos_temperature';
+    const bms1TempNetjesEntity = (this._config && this._config.bms1_temp_netjes_entity) || 'sensor.bms1_temperatuur_netjes';
+    const bms2TempNetjesEntity = (this._config && this._config.bms2_temp_netjes_entity) || 'sensor.bms2_temperatuur_netjes';
+    const indoorTempEntity = (this._config && this._config.indoor_temp_entity) || 'sensor.ewelink_snzb_02p_temperatuur';
+    const indoorHumidityEntity = (this._config && this._config.indoor_humidity_entity) || 'sensor.ewelink_snzb_02p_luchtvochtigheid';
+    const waterhoogteEntity = (this._config && this._config.waterhoogte_entity) || 'sensor.hasselt_zwarte_water_waterhoogte';
+    const waterhoogteVerwachtEntity = (this._config && this._config.waterhoogte_verwacht_entity) || 'sensor.hasselt_zwarte_water_waterhoogte_verwacht';
+    const weerTekstEntity = (this._config && this._config.weer_tekst_entity) || 'sensor.knmi_tekst';
+    const weerCodeEntity = (this._config && this._config.weer_code_entity) || 'sensor.knmi_weercode';
     if (!this.shadowRoot) return;
     const s = this._s.bind(this);
     const st = this._st.bind(this);
@@ -911,20 +959,20 @@ class FinallySkyCard extends HTMLElement {
     const battChar   = parseFloat(battA) > 0;
 
     // ── BMS ──
-    const bms1Soc   = hass ? s('sensor.jk_bms_1_jk_bms_1_soc') : 0;
-    const bms1Temp  = hass ? s('sensor.bms1_temperatuur_netjes').toFixed(1) : '--';
-    const bms1MosT  = hass ? s('sensor.jk_bms_1_jk_bms_1_mos_temperature').toFixed(1) : '--';
-    const bms1Min   = hass ? s('sensor.jk_bms_1_jk_bms_1_cell_volt_min').toFixed(3) : '--';
-    const bms1Max   = hass ? s('sensor.jk_bms_1_jk_bms_1_cell_volt_max').toFixed(3) : '--';
-    const bms1Delta = hass ? (s('sensor.jk_bms_1_jk_bms_1_cell_volt_max') - s('sensor.jk_bms_1_jk_bms_1_cell_volt_min')).toFixed(3) : '--';
-    const bms1Cycli = hass ? s('sensor.jk_bms_1_jk_bms_1_num_cycles').toFixed(0) : '--';
-    const bms2Soc   = hass ? s('sensor.jk_bms_2_jk_bms_2_soc') : 0;
-    const bms2Temp  = hass ? s('sensor.bms2_temperatuur_netjes').toFixed(1) : '--';
-    const bms2MosT  = hass ? s('sensor.jk_bms_2_jk_bms_2_mos_temperature').toFixed(1) : '--';
-    const bms2Min   = hass ? s('sensor.jk_bms_2_jk_bms_2_cell_volt_min').toFixed(3) : '--';
-    const bms2Max   = hass ? s('sensor.jk_bms_2_jk_bms_2_cell_volt_max').toFixed(3) : '--';
-    const bms2Delta = hass ? (s('sensor.jk_bms_2_jk_bms_2_cell_volt_max') - s('sensor.jk_bms_2_jk_bms_2_cell_volt_min')).toFixed(3) : '--';
-    const bms2Cycli = hass ? s('sensor.jk_bms_2_jk_bms_2_num_cycles').toFixed(0) : '--';
+    const bms1Soc   = hass ? s(bms1SocEntity) : 0;
+    const bms1Temp  = hass ? s(bms1TempNetjesEntity).toFixed(1) : '--';
+    const bms1MosT  = hass ? s(bms1MosTempEntity).toFixed(1) : '--';
+    const bms1Min   = hass ? s(bms1CellMinEntity).toFixed(3) : '--';
+    const bms1Max   = hass ? s(bms1CellMaxEntity).toFixed(3) : '--';
+    const bms1Delta = hass ? (s(bms1CellMaxEntity) - s(bms1CellMinEntity)).toFixed(3) : '--';
+    const bms1Cycli = hass ? s(bms1CyclesEntity).toFixed(0) : '--';
+    const bms2Soc   = hass ? s(bms2SocEntity) : 0;
+    const bms2Temp  = hass ? s(bms2TempNetjesEntity).toFixed(1) : '--';
+    const bms2MosT  = hass ? s(bms2MosTempEntity).toFixed(1) : '--';
+    const bms2Min   = hass ? s(bms2CellMinEntity).toFixed(3) : '--';
+    const bms2Max   = hass ? s(bms2CellMaxEntity).toFixed(3) : '--';
+    const bms2Delta = hass ? (s(bms2CellMaxEntity) - s(bms2CellMinEntity)).toFixed(3) : '--';
+    const bms2Cycli = hass ? s(bms2CyclesEntity).toFixed(0) : '--';
     const d1c = parseFloat(bms1Delta) > 0.015 ? '#ff9900' : '#aaffcc';
     const d2c = parseFloat(bms2Delta) > 0.015 ? '#ff9900' : '#aaffcc';
 
@@ -958,8 +1006,8 @@ class FinallySkyCard extends HTMLElement {
     const kabolaHuidigeTemp = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
 
     // ── Omgeving ──
-    const tempBinnen = hass ? s('sensor.ewelink_snzb_02p_temperatuur').toFixed(1) : '--';
-    const vocht      = hass ? s('sensor.ewelink_snzb_02p_luchtvochtigheid').toFixed(0) : '--';
+    const tempBinnen = hass ? s(indoorTempEntity).toFixed(1) : '--';
+    const vocht      = hass ? s(indoorHumidityEntity).toFixed(0) : '--';
     const _wAttr     = hass ? hass.states['weather.forecast_thuis']?.attributes : null;
     const vochtBuiten = _wAttr ? (_wAttr.humidity ?? '--') : '--';
     const windKm     = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
@@ -970,15 +1018,15 @@ class FinallySkyCard extends HTMLElement {
     const _windDirs  = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
     const windDir    = _wAttr ? _windDirs[Math.round(_windBear / 22.5) % 16] : '--';
     const windBft    = _wAttr ? (windKm < 1 ? 0 : windKm < 6 ? 1 : windKm < 12 ? 2 : windKm < 20 ? 3 : windKm < 29 ? 4 : windKm < 39 ? 5 : windKm < 50 ? 6 : windKm < 62 ? 7 : windKm < 75 ? 8 : windKm < 89 ? 9 : windKm < 103 ? 10 : windKm < 117 ? 11 : 12) : '--';
-    const waterhoogte     = hass ? s('sensor.hasselt_zwarte_water_waterhoogte').toFixed(0) : '--';
-    const waterhoogteVerw = hass ? s('sensor.hasselt_zwarte_water_waterhoogte_verwacht').toFixed(0) : '--';
+    const waterhoogte     = hass ? s(waterhoogteEntity).toFixed(0) : '--';
+    const waterhoogteVerw = hass ? s(waterhoogteVerwachtEntity).toFixed(0) : '--';
     const p2000      = hass ? st('input_text.laatste_p2000_bericht') : '--';
     const scheepvaart = hass ? st('sensor.scheepvaart_tekst') : '--';
-    const knmiCode   = hass ? st('sensor.knmi_weercode') : 'Groen';
+    const knmiCode   = hass ? st(weerCodeEntity) : 'Groen';
     const tempBuiten = hass ? (hass.states['weather.forecast_thuis']?.attributes?.temperature ?? '--') : '--';
     const wcond      = hass ? st('weather.forecast_thuis') : '--';
     const wIcon      = {'sunny':'☀️','partlycloudy':'⛅','cloudy':'☁️','overcast':'☁️','rainy':'🌧️','pouring':'🌧️','lightning':'⛈️','lightning-rainy':'⛈️','snowy':'❄️','snowy-rainy':'🌨️','fog':'🌫️','windy':'💨','windy-variant':'💨','clear-night':'🌙'}[wcond] || '🌡️';
-    const knmiTekst  = hass ? st('sensor.knmi_tekst') : '';
+    const knmiTekst  = hass ? st(weerTekstEntity) : '';
 
     // ── Zon — Exacte Khan methode ──
     // Khan SVG viewBox = 520x520, boog punten: links(42,161) top(260,54) rechts(472,161)
@@ -1698,6 +1746,9 @@ ${(this._config && this._config.show_kabola) ? `
   }
 
   _startFlowAnim() {
+    const walstroomSocAanEntity = (this._config && this._config.walstroom_soc_aan_entity) || 'input_number.walstroom_soc_aan';
+    const walstroomSocUitEntity = (this._config && this._config.walstroom_soc_uit_entity) || 'input_number.walstroom_soc_uit';
+    const walstroomZonDrempelEntity = (this._config && this._config.walstroom_zon_drempel_entity) || 'input_number.walstroom_zon_drempel';
     // Animatie via CSS keyframes — geen JS nodig
 
 
@@ -1811,9 +1862,9 @@ ${(this._config && this._config.show_kabola) ? `
 
     const _wiLoad = () => {
       if (!this._hass) return;
-      const aan = parseFloat(this._hass.states['input_number.walstroom_soc_aan']?.state) || 30;
-      const uit = parseFloat(this._hass.states['input_number.walstroom_soc_uit']?.state) || 80;
-      const zon = parseFloat(this._hass.states['input_number.walstroom_zon_drempel']?.state) || 300;
+      const aan = parseFloat(this._hass.states[walstroomSocAanEntity]?.state) || 30;
+      const uit = parseFloat(this._hass.states[walstroomSocUitEntity]?.state) || 80;
+      const zon = parseFloat(this._hass.states[walstroomZonDrempelEntity]?.state) || 300;
       wiPopup._socAan = aan; wiPopup._socUit = uit; wiPopup._zon = zon;
       const v1 = wiPopup.querySelector('#wi-soc-aan-val');
       const v2 = wiPopup.querySelector('#wi-soc-uit-val');
@@ -1839,32 +1890,32 @@ ${(this._config && this._config.show_kabola) ? `
       _btn('wi-soc-aan-min', () => {
         wiPopup._socAan = Math.max(10, (wiPopup._socAan || 30) - 5);
         const el = wiPopup.querySelector('#wi-soc-aan-val'); if (el) el.textContent = wiPopup._socAan + '%';
-        _wiSet('input_number.walstroom_soc_aan', wiPopup._socAan);
+        _wiSet(walstroomSocAanEntity, wiPopup._socAan);
       });
       _btn('wi-soc-aan-plus', () => {
         wiPopup._socAan = Math.min(70, (wiPopup._socAan || 30) + 5);
         const el = wiPopup.querySelector('#wi-soc-aan-val'); if (el) el.textContent = wiPopup._socAan + '%';
-        _wiSet('input_number.walstroom_soc_aan', wiPopup._socAan);
+        _wiSet(walstroomSocAanEntity, wiPopup._socAan);
       });
       _btn('wi-soc-uit-min', () => {
         wiPopup._socUit = Math.max(50, (wiPopup._socUit || 80) - 5);
         const el = wiPopup.querySelector('#wi-soc-uit-val'); if (el) el.textContent = wiPopup._socUit + '%';
-        _wiSet('input_number.walstroom_soc_uit', wiPopup._socUit);
+        _wiSet(walstroomSocUitEntity, wiPopup._socUit);
       });
       _btn('wi-soc-uit-plus', () => {
         wiPopup._socUit = Math.min(100, (wiPopup._socUit || 80) + 5);
         const el = wiPopup.querySelector('#wi-soc-uit-val'); if (el) el.textContent = wiPopup._socUit + '%';
-        _wiSet('input_number.walstroom_soc_uit', wiPopup._socUit);
+        _wiSet(walstroomSocUitEntity, wiPopup._socUit);
       });
       _btn('wi-zon-min', () => {
         wiPopup._zon = Math.max(0, (wiPopup._zon || 300) - 50);
         const el = wiPopup.querySelector('#wi-zon-val'); if (el) el.textContent = wiPopup._zon + ' W';
-        _wiSet('input_number.walstroom_zon_drempel', wiPopup._zon);
+        _wiSet(walstroomZonDrempelEntity, wiPopup._zon);
       });
       _btn('wi-zon-plus', () => {
         wiPopup._zon = Math.min(1000, (wiPopup._zon || 300) + 50);
         const el = wiPopup.querySelector('#wi-zon-val'); if (el) el.textContent = wiPopup._zon + ' W';
-        _wiSet('input_number.walstroom_zon_drempel', wiPopup._zon);
+        _wiSet(walstroomZonDrempelEntity, wiPopup._zon);
       });
 
       if (wiSluit) wiSluit.onclick = (e) => { e.stopPropagation(); this._walInstPopupOpen = false; wiPopup.style.display = 'none'; };
@@ -2054,9 +2105,10 @@ class FinallySkyCardMobile extends HTMLElement {
   }
 
   _loadWaterForecast() {
+    const waterhoogteVerwachtEntity = (this._config && this._config.waterhoogte_verwacht_entity) || 'sensor.hasselt_zwarte_water_waterhoogte_verwacht';
     if (!this._hass) return;
     try {
-      const fc = this._hass.states['sensor.hasselt_zwarte_water_waterhoogte_verwacht']?.attributes?.Forecast;
+      const fc = this._hass.states[waterhoogteVerwachtEntity]?.attributes?.Forecast;
       if (Array.isArray(fc) && fc.length) {
         this._waterForecast = fc
           .map(p => ({ t: new Date(p.Time).getTime(), v: parseFloat(p.Value) }))
@@ -2103,6 +2155,30 @@ class FinallySkyCardMobile extends HTMLElement {
   _deltaColor(d) { return d < 0.010 ? '#00ff88' : d < 0.020 ? '#ffd700' : '#ff4444'; }
 
   _render() {
+    const bms1CellMinEntity = (this._config && this._config.bms1_cell_min_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_min';
+    const bms1CellMaxEntity = (this._config && this._config.bms1_cell_max_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_max';
+    const bms1SocEntity = (this._config && this._config.bms1_soc_entity) || 'sensor.jk_bms_1_jk_bms_1_soc';
+    const bms1CyclesEntity = (this._config && this._config.bms1_cycles_entity) || 'sensor.jk_bms_1_jk_bms_1_num_cycles';
+    const bms1MosTempEntity = (this._config && this._config.bms1_mos_temp_entity) || 'sensor.jk_bms_1_jk_bms_1_mos_temperature';
+    const bms2CellMinEntity = (this._config && this._config.bms2_cell_min_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_min';
+    const bms2CellMaxEntity = (this._config && this._config.bms2_cell_max_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_max';
+    const bms2SocEntity = (this._config && this._config.bms2_soc_entity) || 'sensor.jk_bms_2_jk_bms_2_soc';
+    const bms2CyclesEntity = (this._config && this._config.bms2_cycles_entity) || 'sensor.jk_bms_2_jk_bms_2_num_cycles';
+    const bms2MosTempEntity = (this._config && this._config.bms2_mos_temp_entity) || 'sensor.jk_bms_2_jk_bms_2_mos_temperature';
+    const bms1TempNetjesEntity = (this._config && this._config.bms1_temp_netjes_entity) || 'sensor.bms1_temperatuur_netjes';
+    const bms2TempNetjesEntity = (this._config && this._config.bms2_temp_netjes_entity) || 'sensor.bms2_temperatuur_netjes';
+    const indoorHumidityEntity = (this._config && this._config.indoor_humidity_entity) || 'sensor.ewelink_snzb_02p_luchtvochtigheid';
+    const heatingClimateEntity = (this._config && this._config.heating_climate_entity) || 'climate.verwarming_boot';
+    const douchepompSwitchEntity = (this._config && this._config.douchepomp_switch_entity) || 'switch.shellyplus1_78ee4cc39480';
+    const waterhoogteEntity = (this._config && this._config.waterhoogte_entity) || 'sensor.hasselt_zwarte_water_waterhoogte';
+    const waterhoogteVerwachtEntity = (this._config && this._config.waterhoogte_verwacht_entity) || 'sensor.hasselt_zwarte_water_waterhoogte_verwacht';
+    const weerTekstEntity = (this._config && this._config.weer_tekst_entity) || 'sensor.knmi_tekst';
+    const weerCodeEntity = (this._config && this._config.weer_code_entity) || 'sensor.knmi_weercode';
+    const sunNextRisingEntity = (this._config && this._config.sun_next_rising_entity) || 'sensor.sun_next_rising';
+    const sunNextSettingEntity = (this._config && this._config.sun_next_setting_entity) || 'sensor.sun_next_setting';
+    const walstroomSocAanEntity = (this._config && this._config.walstroom_soc_aan_entity) || 'input_number.walstroom_soc_aan';
+    const walstroomSocUitEntity = (this._config && this._config.walstroom_soc_uit_entity) || 'input_number.walstroom_soc_uit';
+    const walstroomZonDrempelEntity = (this._config && this._config.walstroom_zon_drempel_entity) || 'input_number.walstroom_zon_drempel';
     if (!this.shadowRoot) return;
     const hass = this._hass;
     if (!hass) {
@@ -2161,21 +2237,21 @@ class FinallySkyCardMobile extends HTMLElement {
     const socColor  = this._socColor(battSoc);
 
     // ── BMS ──
-    const bms1Soc   = s('sensor.jk_bms_1_jk_bms_1_soc');
-    const bms1Min   = s('sensor.jk_bms_1_jk_bms_1_cell_volt_min').toFixed(3);
-    const bms1Max   = s('sensor.jk_bms_1_jk_bms_1_cell_volt_max').toFixed(3);
-    const bms1Delta = (s('sensor.jk_bms_1_jk_bms_1_cell_volt_max') - s('sensor.jk_bms_1_jk_bms_1_cell_volt_min')).toFixed(3);
-    const bms1Temp  = s('sensor.bms1_temperatuur_netjes').toFixed(1);
-    const bms1MosT  = s('sensor.jk_bms_1_jk_bms_1_mos_temperature').toFixed(1);
-    const bms1Cycli = s('sensor.jk_bms_1_jk_bms_1_num_cycles');
+    const bms1Soc   = s(bms1SocEntity);
+    const bms1Min   = s(bms1CellMinEntity).toFixed(3);
+    const bms1Max   = s(bms1CellMaxEntity).toFixed(3);
+    const bms1Delta = (s(bms1CellMaxEntity) - s(bms1CellMinEntity)).toFixed(3);
+    const bms1Temp  = s(bms1TempNetjesEntity).toFixed(1);
+    const bms1MosT  = s(bms1MosTempEntity).toFixed(1);
+    const bms1Cycli = s(bms1CyclesEntity);
 
-    const bms2Soc   = s('sensor.jk_bms_2_jk_bms_2_soc');
-    const bms2Min   = s('sensor.jk_bms_2_jk_bms_2_cell_volt_min').toFixed(3);
-    const bms2Max   = s('sensor.jk_bms_2_jk_bms_2_cell_volt_max').toFixed(3);
-    const bms2Delta = (s('sensor.jk_bms_2_jk_bms_2_cell_volt_max') - s('sensor.jk_bms_2_jk_bms_2_cell_volt_min')).toFixed(3);
-    const bms2Temp  = s('sensor.bms2_temperatuur_netjes').toFixed(1);
-    const bms2MosT  = s('sensor.jk_bms_2_jk_bms_2_mos_temperature').toFixed(1);
-    const bms2Cycli = s('sensor.jk_bms_2_jk_bms_2_num_cycles');
+    const bms2Soc   = s(bms2SocEntity);
+    const bms2Min   = s(bms2CellMinEntity).toFixed(3);
+    const bms2Max   = s(bms2CellMaxEntity).toFixed(3);
+    const bms2Delta = (s(bms2CellMaxEntity) - s(bms2CellMinEntity)).toFixed(3);
+    const bms2Temp  = s(bms2TempNetjesEntity).toFixed(1);
+    const bms2MosT  = s(bms2MosTempEntity).toFixed(1);
+    const bms2Cycli = s(bms2CyclesEntity);
 
     // ── PV ──
     // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
@@ -2234,7 +2310,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const _windBearM = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const _windDirsM = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
     const windDirM   = _wAttr ? _windDirsM[Math.round(_windBearM / 22.5) % 16] : '--';
-    const vocht      = s('sensor.ewelink_snzb_02p_luchtvochtigheid').toFixed(0);
+    const vocht      = s(indoorHumidityEntity).toFixed(0);
     const windKm     = windKmM;
     const windDir    = windDirM;
     const windUnitMs = (this._config && this._config.wind_unit === 'ms');
@@ -2242,8 +2318,8 @@ class FinallySkyCardMobile extends HTMLElement {
     const windUnitLbl = windUnitMs ? 'm/s' : 'km/h';
     const windBft    = _wAttr ? (parseFloat(windKmM) < 1 ? 0 : parseFloat(windKmM) < 6 ? 1 : parseFloat(windKmM) < 12 ? 2 : parseFloat(windKmM) < 20 ? 3 : parseFloat(windKmM) < 29 ? 4 : parseFloat(windKmM) < 39 ? 5 : parseFloat(windKmM) < 50 ? 6 : parseFloat(windKmM) < 62 ? 7 : 8) : '--';
     const baro       = (_wAttr && _wAttr.pressure != null) ? Math.round(_wAttr.pressure) : '--';
-    const water      = s('sensor.hasselt_zwarte_water_waterhoogte').toFixed(0);
-    const waterVerw  = s('sensor.hasselt_zwarte_water_waterhoogte_verwacht').toFixed(0);
+    const water      = s(waterhoogteEntity).toFixed(0);
+    const waterVerw  = s(waterhoogteVerwachtEntity).toFixed(0);
 
     // ── Verwarming ──
 
@@ -2268,18 +2344,18 @@ class FinallySkyCardMobile extends HTMLElement {
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = st(walstroomSwitchEntity) === 'on';
     const walOverride  = st(walstroomOverrideEntity) === 'on';
-    const knmiCode   = st('sensor.knmi_weercode');
+    const knmiCode   = st(weerCodeEntity);
     const walstroom  = s(walstroomVerbruikWattEntity).toFixed(0);
 
     // ── Zon ──
     const sunState = st('sun.sun');
     const sunAbove = sunState === 'above_horizon';
-    const zonOp    = this._zt('sensor.sun_next_rising');
-    const zonOnd   = this._zt('sensor.sun_next_setting');
+    const zonOp    = this._zt(sunNextRisingEntity);
+    const zonOnd   = this._zt(sunNextSettingEntity);
     const sunElev  = parseFloat(this._attr('sun.sun', 'elevation')).toFixed(1);
 
     // ── Weer / forecast ──
-    const knmiTekst    = st('sensor.knmi_tekst');
+    const knmiTekst    = st(weerTekstEntity);
     const scheepvaart  = st('sensor.scheepvaart_tekst');
     const windDeg      = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const windDirs     = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
@@ -2935,11 +3011,11 @@ ${(this._config && this._config.show_kabola) ? `
     <div class="card-grid">
 
       <!-- Douchepomp touchknop -->
-      <div class="touch-btn" id="m-doucheknop" data-aan="${st('switch.shellyplus1_78ee4cc39480') === 'on'}"
-           style="border-color:rgba(0,200,255,${st('switch.shellyplus1_78ee4cc39480') === 'on' ? '0.5' : '0.2'});background:${st('switch.shellyplus1_78ee4cc39480') === 'on' ? 'rgba(0,200,255,0.12)' : 'rgba(255,255,255,0.04)'}">
+      <div class="touch-btn" id="m-doucheknop" data-aan="${st(douchepompSwitchEntity) === 'on'}"
+           style="border-color:rgba(0,200,255,${st(douchepompSwitchEntity) === 'on' ? '0.5' : '0.2'});background:${st(douchepompSwitchEntity) === 'on' ? 'rgba(0,200,255,0.12)' : 'rgba(255,255,255,0.04)'}">
         <div style="font-size:22px;margin-bottom:4px">🚿</div>
         <div class="lbl">DOUCHEPOMP</div>
-        <div style="font-size:18px;font-weight:700;color:${st('switch.shellyplus1_78ee4cc39480') === 'on' ? '#00ccff' : 'rgba(255,255,255,0.3)'}">${st('switch.shellyplus1_78ee4cc39480') === 'on' ? '● AAN' : '○ UIT'}</div>
+        <div style="font-size:18px;font-weight:700;color:${st(douchepompSwitchEntity) === 'on' ? '#00ccff' : 'rgba(255,255,255,0.3)'}">${st(douchepompSwitchEntity) === 'on' ? '● AAN' : '○ UIT'}</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">tik om te schakelen</div>
       </div>
     </div>
@@ -3251,9 +3327,9 @@ ${(this._config && this._config.show_generator) ? `
 
     const _mVerwUpdate = () => {
       if (!this._hass) return;
-      const aan = this._hass.states['climate.verwarming_boot']?.state === 'heat';
-      const cur = this._hass.states['climate.verwarming_boot']?.attributes?.current_temperature ?? '--';
-      const set = parseFloat(this._hass.states['climate.verwarming_boot']?.attributes?.temperature ?? 19);
+      const aan = this._hass.states[heatingClimateEntity]?.state === 'heat';
+      const cur = this._hass.states[heatingClimateEntity]?.attributes?.current_temperature ?? '--';
+      const set = parseFloat(this._hass.states[heatingClimateEntity]?.attributes?.temperature ?? 19);
       if (mVerwHuidig) mVerwHuidig.textContent = cur + '°C';
       if (mVerwSet) mVerwSet.textContent = set.toFixed(1) + '°';
       if (mVerwToggle) {
@@ -3272,24 +3348,24 @@ ${(this._config && this._config.show_generator) ? `
     }
     if (mVerwToggle) {
       mVerwToggle.onclick = () => {
-        const aan = this._hass.states['climate.verwarming_boot']?.state === 'heat';
-        this._hass.callService('climate', aan ? 'turn_off' : 'turn_on', { entity_id: 'climate.verwarming_boot' });
+        const aan = this._hass.states[heatingClimateEntity]?.state === 'heat';
+        this._hass.callService('climate', aan ? 'turn_off' : 'turn_on', { entity_id: heatingClimateEntity });
         setTimeout(_mVerwUpdate, 500);
       };
     }
     if (mVerwPlus) {
       mVerwPlus.onclick = () => {
-        const cur = parseFloat(this._hass.states['climate.verwarming_boot']?.attributes?.temperature ?? 19);
+        const cur = parseFloat(this._hass.states[heatingClimateEntity]?.attributes?.temperature ?? 19);
         const newT = Math.min(cur + 0.5, 25);
-        this._hass.callService('climate', 'set_temperature', { entity_id: 'climate.verwarming_boot', temperature: newT });
+        this._hass.callService('climate', 'set_temperature', { entity_id: heatingClimateEntity, temperature: newT });
         setTimeout(_mVerwUpdate, 500);
       };
     }
     if (mVerwMin) {
       mVerwMin.onclick = () => {
-        const cur = parseFloat(this._hass.states['climate.verwarming_boot']?.attributes?.temperature ?? 19);
+        const cur = parseFloat(this._hass.states[heatingClimateEntity]?.attributes?.temperature ?? 19);
         const newT = Math.max(cur - 0.5, 10);
-        this._hass.callService('climate', 'set_temperature', { entity_id: 'climate.verwarming_boot', temperature: newT });
+        this._hass.callService('climate', 'set_temperature', { entity_id: heatingClimateEntity, temperature: newT });
         setTimeout(_mVerwUpdate, 500);
       };
     }
@@ -3336,7 +3412,7 @@ ${(this._config && this._config.show_generator) ? `
     if (doucheknop && this._hass) {
       doucheknop.onclick = () => {
         const aan = doucheknop.dataset.aan === 'true';
-        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', { entity_id: 'switch.shellyplus1_78ee4cc39480' });
+        this._hass.callService('switch', aan ? 'turn_off' : 'turn_on', { entity_id: douchepompSwitchEntity });
       };
     }
 
@@ -3348,9 +3424,9 @@ ${(this._config && this._config.show_generator) ? `
 
     const _mWiLoad = () => {
       if (!this._hass) return;
-      const aan = parseFloat(this._hass.states['input_number.walstroom_soc_aan']?.state) || 30;
-      const uit = parseFloat(this._hass.states['input_number.walstroom_soc_uit']?.state) || 80;
-      const zon = parseFloat(this._hass.states['input_number.walstroom_zon_drempel']?.state) || 300;
+      const aan = parseFloat(this._hass.states[walstroomSocAanEntity]?.state) || 30;
+      const uit = parseFloat(this._hass.states[walstroomSocUitEntity]?.state) || 80;
+      const zon = parseFloat(this._hass.states[walstroomZonDrempelEntity]?.state) || 300;
       mWiPopup._socAan = aan; mWiPopup._socUit = uit; mWiPopup._zon = zon;
       const v1 = mWiPopup.querySelector('#m-wi-soc-aan-val');
       const v2 = mWiPopup.querySelector('#m-wi-soc-uit-val');
@@ -3370,12 +3446,12 @@ ${(this._config && this._config.show_generator) ? `
     if (mWiBtn && mWiPopup && this._hass) {
       if (this._walInstPopupOpen) { mWiPopup.style.display = 'flex'; _mWiLoad(); }
       mWiBtn.onclick = () => { this._walInstPopupOpen = true; _mWiLoad(); mWiPopup.style.display = 'flex'; };
-      _mWiBtn('m-wi-soc-aan-min', () => { mWiPopup._socAan = Math.max(10, (mWiPopup._socAan||30)-5); const el=mWiPopup.querySelector('#m-wi-soc-aan-val'); if(el) el.textContent=mWiPopup._socAan+'%'; _mWiSet('input_number.walstroom_soc_aan', mWiPopup._socAan); });
-      _mWiBtn('m-wi-soc-aan-plus', () => { mWiPopup._socAan = Math.min(70, (mWiPopup._socAan||30)+5); const el=mWiPopup.querySelector('#m-wi-soc-aan-val'); if(el) el.textContent=mWiPopup._socAan+'%'; _mWiSet('input_number.walstroom_soc_aan', mWiPopup._socAan); });
-      _mWiBtn('m-wi-soc-uit-min', () => { mWiPopup._socUit = Math.max(50, (mWiPopup._socUit||80)-5); const el=mWiPopup.querySelector('#m-wi-soc-uit-val'); if(el) el.textContent=mWiPopup._socUit+'%'; _mWiSet('input_number.walstroom_soc_uit', mWiPopup._socUit); });
-      _mWiBtn('m-wi-soc-uit-plus', () => { mWiPopup._socUit = Math.min(100, (mWiPopup._socUit||80)+5); const el=mWiPopup.querySelector('#m-wi-soc-uit-val'); if(el) el.textContent=mWiPopup._socUit+'%'; _mWiSet('input_number.walstroom_soc_uit', mWiPopup._socUit); });
-      _mWiBtn('m-wi-zon-min', () => { mWiPopup._zon = Math.max(0, (mWiPopup._zon||300)-50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet('input_number.walstroom_zon_drempel', mWiPopup._zon); });
-      _mWiBtn('m-wi-zon-plus', () => { mWiPopup._zon = Math.min(1000, (mWiPopup._zon||300)+50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet('input_number.walstroom_zon_drempel', mWiPopup._zon); });
+      _mWiBtn('m-wi-soc-aan-min', () => { mWiPopup._socAan = Math.max(10, (mWiPopup._socAan||30)-5); const el=mWiPopup.querySelector('#m-wi-soc-aan-val'); if(el) el.textContent=mWiPopup._socAan+'%'; _mWiSet(walstroomSocAanEntity, mWiPopup._socAan); });
+      _mWiBtn('m-wi-soc-aan-plus', () => { mWiPopup._socAan = Math.min(70, (mWiPopup._socAan||30)+5); const el=mWiPopup.querySelector('#m-wi-soc-aan-val'); if(el) el.textContent=mWiPopup._socAan+'%'; _mWiSet(walstroomSocAanEntity, mWiPopup._socAan); });
+      _mWiBtn('m-wi-soc-uit-min', () => { mWiPopup._socUit = Math.max(50, (mWiPopup._socUit||80)-5); const el=mWiPopup.querySelector('#m-wi-soc-uit-val'); if(el) el.textContent=mWiPopup._socUit+'%'; _mWiSet(walstroomSocUitEntity, mWiPopup._socUit); });
+      _mWiBtn('m-wi-soc-uit-plus', () => { mWiPopup._socUit = Math.min(100, (mWiPopup._socUit||80)+5); const el=mWiPopup.querySelector('#m-wi-soc-uit-val'); if(el) el.textContent=mWiPopup._socUit+'%'; _mWiSet(walstroomSocUitEntity, mWiPopup._socUit); });
+      _mWiBtn('m-wi-zon-min', () => { mWiPopup._zon = Math.max(0, (mWiPopup._zon||300)-50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet(walstroomZonDrempelEntity, mWiPopup._zon); });
+      _mWiBtn('m-wi-zon-plus', () => { mWiPopup._zon = Math.min(1000, (mWiPopup._zon||300)+50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet(walstroomZonDrempelEntity, mWiPopup._zon); });
       if (mWiSluit) mWiSluit.onclick = (e) => { e.stopPropagation(); this._walInstPopupOpen = false; mWiPopup.style.display = 'none'; };
       mWiPopup.onclick = (e) => { if (e.target === mWiPopup) { this._walInstPopupOpen = false; mWiPopup.style.display = 'none'; } };
     }
