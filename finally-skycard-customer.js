@@ -1,9 +1,22 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.7
+   Versie: 3.3.8
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.8 — Nog een audit-vondst: load_dag_entity / load_maand_entity
+   (Verbruik vandaag/maand in de Walstroom & Verbruik-popup) stonden nog
+   hardcoded op sensor.gx_device_ac_uitgang_dagverbruik /
+   sensor.gx_device_quattro_uitgang_maandoverzicht. Ondanks de
+   "gx_device_"-naam zijn dit GEEN universele Victron-integratie-
+   entiteiten (in tegenstelling tot bijv. gx_device_dc_battery_power) —
+   het zijn Eriks eigen utility_meter-helpers (Riemann-som op
+   gx_device_consumption_power_l1, dus wel een universele bron, maar
+   zelf per installatie opnieuw opgebouwd). Nu configureerbaar. Bij
+   Michiel ontbrak deze hele helper-keten; opnieuw opgebouwd op zijn
+   systeem (zelfde opzet: integration-helper → maand-utility_meter →
+   dag-utility_meter erop).
 
    v3.3.7 — Punt B (audit-refactor), afronding blok 6 + weer-entity:
    - weather_entity is nu configureerbaar (11 plekken hardcoded op Eriks
@@ -2314,8 +2327,10 @@ class FinallySkyCardMobile extends HTMLElement {
     const walDag     = s(walstroomDagverbruikEntity).toFixed(2);
     const walMaand   = s(walstroomVerbruikMaandEntity).toFixed(2);
     const walKosten  = (parseFloat(walMaand) * 0.50).toFixed(2);
-    const loadDag    = s('sensor.gx_device_ac_uitgang_dagverbruik').toFixed(2);
-    const loadMaand  = s('sensor.gx_device_quattro_uitgang_maandoverzicht').toFixed(1);
+    const loadDagEntity = (this._config && this._config.load_dag_entity) || 'sensor.gx_device_ac_uitgang_dagverbruik';
+    const loadMaandEntity = (this._config && this._config.load_maand_entity) || 'sensor.gx_device_quattro_uitgang_maandoverzicht';
+    const loadDag    = s(loadDagEntity).toFixed(2);
+    const loadMaand  = s(loadMaandEntity).toFixed(1);
     const acInputLimit = s('number.gx_device_ac_input_limit').toFixed(0);
 
     // ── Quattro ──
