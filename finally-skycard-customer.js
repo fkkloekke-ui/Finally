@@ -1,17 +1,28 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.15
+   Versie: 3.4.1
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
 
-   v3.3.15 — Hersteld na verwarring in een andere chatsessie: v3.3.13 en
-   v3.3.14 werden per ongeluk gebouwd op een oud/onvolledig basisbestand
-   (uit een andere, geïsoleerde sandbox) en misten een groot deel van de
-   functionaliteit tot en met v3.3.12. Dit bestand is inhoudelijk
-   identiek aan v3.3.12 (alle audit-refactors, dieselkosten-tegel,
-   Michiel-fixes, MPPT-Engels-herstel) — alleen het versienummer is
-   opgehoogd om de kapotte tussenversies op GitHub te overschrijven.
+   v3.4.1 — Regressie uit v3.3.9 gefixt: de mobiele dieselkosten-
+   instellingen-popup (_genKostenPopupOpen) miste de guard in de
+   hass-setter die volledige her-renders onderdrukt terwijl een popup
+   open staat (zelfde scroll-reset-mechanisme als _energiePopupOpen /
+   _walInstPopupOpen sinds v3.2.7). Zonder deze guard herbouwde de kaart
+   elke ~2s de hele DOM terwijl je verbruik/dieselprijs probeerde in te
+   stellen. De kiosk-kant had dit probleem niet — die gebruikt de
+   generieke sidebar-guard (sbContainer._activePanel), die de nieuwe
+   Generator-sectie al automatisch meenam.
+
+   v3.4.0 — Versienummer opgehoogd na verwarring met v3.3.13/v3.3.14 in
+   een andere chatsessie: die twee werden per ongeluk gebouwd op een
+   oud/onvolledig basisbestand (uit een andere, geïsoleerde sandbox) en
+   misten een groot deel van de functionaliteit tot en met v3.3.12. Dit
+   bestand is inhoudelijk identiek aan v3.3.12 (alle audit-refactors,
+   dieselkosten-tegel, Michiel-fixes, MPPT-Engels-herstel) — alleen het
+   versienummer is opgehoogd om de kapotte tussenversies op GitHub te
+   overschrijven.
 
    v3.3.12 — MPPT-status terug naar de rauwe Engelse Victron-waarde
    (bulk/absorption/float/etc.), de Nederlandse vertaling uit v3.3.3
@@ -2185,6 +2196,8 @@ class FinallySkyCardMobile extends HTMLElement {
     if (this._walInstPopupOpen) return;
     // Render niet als energie-popup open is (voorkomt scroll-reset)
     if (this._energiePopupOpen) return;
+    // Render niet als generator-dieselkosten-instellingen open is (zelfde reden)
+    if (this._genKostenPopupOpen) return;
     if (now - this._lastUpdate > 2000) {
       this._lastUpdate = now;
       this._render();
