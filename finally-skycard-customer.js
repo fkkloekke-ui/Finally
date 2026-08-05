@@ -1,9 +1,24 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.10
+   Versie: 3.3.11
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.11 — Generator/dieselkosten nu ook in de kiosk-energiepopup
+   (naast Zon/Walstroom-totalen), niet alleen in de mobiele weergave.
+   Bijvangst tijdens het bouwen: nog twee gemiste hardcoded entiteiten
+   in diezelfde popup — sensor.gx_device_ac_uitgang_dagverbruik en
+   sensor.gx_device_verbruik_aan_boord_maand (beide Eriks eigen
+   utility_meter-helpers, geen universele Victron-namen, zelfde
+   categorie fout als v3.3.8). Nu configureerbaar via load_dag_entity
+   (hergebruikt) en het nieuwe load_aan_boord_maand_entity. De
+   generator-sectie in de popup is bewust NIET achter show_generator
+   gezet — de kiosk toont zijn generatortegel altijd ongeacht die vlag
+   (in tegenstelling tot mobiel), dus de popup-sectie volgt dat gedrag.
+   Bij Michiel gekoppeld; load_aan_boord_maand_entity wijst daar naar
+   dezelfde Quattro Uitgang Maandoverzicht-meter als load_maand_entity
+   (geen aparte nieuwe helper-keten, want zelfde onderliggende grootheid).
 
    v3.3.10 — Dieselkosten-tegel (v3.3.9) verfijnd op twee punten:
    1) Dieselprijs-stapgrootte van €0,05 naar €0,005 (halve cent),
@@ -427,7 +442,13 @@ class FinallySkyCard extends HTMLElement {
         <div class="sb-mini"><div class="sb-mini-lbl">Walstroom kosten</div><div class="sb-mini-val" id="ep-gkost" style="color:#00aaff">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Rendement</div><div class="sb-mini-val" id="ep-rend" style="color:#aaffcc">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Gem. verbruik/dag</div><div class="sb-mini-val" id="ep-gemdag" style="color:#ff8844">--</div></div>
-      </div>`);
+      </div>
+      <div class="sb-section">Generator</div>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:12px">
+        <div class="sb-mini"><div class="sb-mini-lbl">Draaiuren deze maand</div><div class="sb-mini-val" id="ep-gendraai" style="color:#ffcc44">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Dieselkosten deze maand</div><div class="sb-mini-val" id="ep-genkost" style="color:#ffcc44">--</div></div>
+      </div>
+      `);
 
     if (id === 'solar') return h(`
       <div class="sb-grid">
@@ -645,6 +666,11 @@ class FinallySkyCard extends HTMLElement {
     // Accu-capaciteit (configureerbaar; zonder deze twee velden valt de kaart terug op Eriks eigen Template Helpers)
     const battCapacityWh = this._config && this._config.battery_capacity_wh;
     const battMinSocPct = this._config && this._config.battery_min_soc_pct;
+    const loadDagEntity = (this._config && this._config.load_dag_entity) || 'sensor.gx_device_ac_uitgang_dagverbruik';
+    const loadAanBoordMaandEntity = (this._config && this._config.load_aan_boord_maand_entity) || 'sensor.gx_device_verbruik_aan_boord_maand';
+    const genVerbruikEntityP = (this._config && this._config.generator_verbruik_entity) || 'input_number.generator_verbruik_lh';
+    const genDieselPrijsEntityP = (this._config && this._config.generator_diesel_prijs_entity) || 'input_number.generator_diesel_prijs';
+    const genRuntimeMaandEntityP = (this._config && this._config.generator_runtime_maand_entity) || 'sensor.generator_draaiuren_maand';
 
     if (id === 'energie') {
       const lW=_s('sensor.gx_device_consumption_power_l1'), pW=_s('sensor.gx_device_pv_power'),
@@ -663,13 +689,13 @@ class FinallySkyCard extends HTMLElement {
       T('ep-pvg',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
       T('ep-pvm',_s(pvMaandEntity).toFixed(1)+' kWh');
       T('ep-gd',_s(walstroomDagverbruikEntity).toFixed(2)+' kWh');
-      T('ep-ld',_s('sensor.gx_device_ac_uitgang_dagverbruik').toFixed(2)+' kWh');
-      T('ep-lm',_s('sensor.gx_device_verbruik_aan_boord_maand').toFixed(1)+' kWh');
+      T('ep-ld',_s(loadDagEntity).toFixed(2)+' kWh');
+      T('ep-lm',_s(loadAanBoordMaandEntity).toFixed(1)+' kWh');
       T('ep-dcv',dcV+' V'); T('ep-dcw',dcW+' W');
       // Kosten & rendement
       const pvM2  = _s(pvMaandEntity);
       const walM  = _s(walstroomVerbruikMaandEntity);
-      const uitM  = _s('sensor.gx_device_verbruik_aan_boord_maand');
+      const uitM  = _s(loadAanBoordMaandEntity);
       const inTot = pvM2 + walM;
       const rend  = inTot > 0 ? ((uitM / inTot) * 100).toFixed(1) + ' %' : '-- %';
       const dagNr = new Date().getDate();
@@ -678,6 +704,12 @@ class FinallySkyCard extends HTMLElement {
       T('ep-gkost',  '€ ' + (walM * 0.50).toFixed(2));
       T('ep-rend',   rend);
       T('ep-gemdag', gemDag);
+      // Generator dieselkosten
+      const genVerbr = _s(genVerbruikEntityP);
+      const genPrijs = _s(genDieselPrijsEntityP);
+      const genUrenMaand = _s(genRuntimeMaandEntityP);
+      T('ep-gendraai', genUrenMaand.toFixed(1)+' u');
+      T('ep-genkost', '€ ' + (genUrenMaand * genVerbr * genPrijs).toFixed(2));
     }
     else if (id === 'solar') {
       const pW=_s('sensor.gx_device_pv_power'), pA=_s('sensor.gx_device_pv_current').toFixed(1);
