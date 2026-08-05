@@ -1,9 +1,22 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.3.9
+   Versie: 3.3.10
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.3.10 — Dieselkosten-tegel (v3.3.9) verfijnd op twee punten:
+   1) Dieselprijs-stapgrootte van €0,05 naar €0,005 (halve cent),
+      weergave nu op 3 decimalen zodat de stap zichtbaar is.
+   2) "Totaal" was gebaseerd op de levenslange generator-draaiuren-
+      teller — dat klopte niet met hoe PV/walstroom het doen (die
+      tonen "deze maand"). Nieuw config-veld
+      generator_runtime_maand_entity (fallback
+      sensor.generator_draaiuren_maand) — een maandelijkse
+      utility_meter op generator_start_stop_total_runtime, zelfde
+      patroon als de PV/walstroom-maandtellers. Tegel en info-rij
+      hernoemd van "totaal" naar "deze maand". Bij Michiel aangemaakt:
+      sensor.generator_start_stop_generator_draaiuren_maand.
 
    v3.3.9 — Nieuwe "Dieselkosten"-tegel naast de generator start/stop-
    knop (mobiel). Ruwe schatting: draaiuren (bestaande universele
@@ -2404,9 +2417,11 @@ class FinallySkyCardMobile extends HTMLElement {
     const genRuntimeTotal = s('sensor.generator_start_stop_total_runtime').toFixed(0);
     const genVerbruikEntity = (this._config && this._config.generator_verbruik_entity) || 'input_number.generator_verbruik_lh';
     const genDieselPrijsEntity = (this._config && this._config.generator_diesel_prijs_entity) || 'input_number.generator_diesel_prijs';
+    const genRuntimeMaandEntity = (this._config && this._config.generator_runtime_maand_entity) || 'sensor.generator_draaiuren_maand';
     const genVerbruik = s(genVerbruikEntity);
     const genDieselPrijs = s(genDieselPrijsEntity);
-    const genKostenTotaal = (parseFloat(genRuntimeTotal) * genVerbruik * genDieselPrijs).toFixed(2);
+    const genRuntimeMaand = s(genRuntimeMaandEntity).toFixed(1);
+    const genKostenMaand = (parseFloat(genRuntimeMaand) * genVerbruik * genDieselPrijs).toFixed(2);
     const genKostenVandaag = (parseFloat(genRuntimeToday) * genVerbruik * genDieselPrijs).toFixed(2);
     const genServiceCounter = s('sensor.generator_start_stop_service_counter').toFixed(0);
     const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
@@ -3167,7 +3182,7 @@ ${(this._config && this._config.show_generator) ? `
            style="border-color:rgba(255,204,68,0.3);background:rgba(255,204,68,0.06)">
         <div style="font-size:22px;margin-bottom:4px">⛽</div>
         <div class="lbl">DIESELKOSTEN</div>
-        <div style="font-size:20px;font-weight:700;color:#ffcc44">€ ${genKostenTotaal}</div>
+        <div style="font-size:20px;font-weight:700;color:#ffcc44">€ ${genKostenMaand}</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">tik om in te stellen</div>
       </div>
     </div>
@@ -3180,7 +3195,7 @@ ${(this._config && this._config.show_generator) ? `
       <div class="row"><span class="row-lbl">Draaiuren totaal</span><span class="row-val">${genRuntimeTotal} u</span></div>
       <div class="row"><span class="row-lbl">Sinds onderhoud</span><span class="row-val">${genServiceCounter} u</span></div>
       <div class="row"><span class="row-lbl">Dieselkosten vandaag</span><span class="row-val">€ ${genKostenVandaag}</span></div>
-      <div class="row"><span class="row-lbl">Dieselkosten totaal</span><span class="row-val">€ ${genKostenTotaal}</span></div>
+      <div class="row"><span class="row-lbl">Dieselkosten deze maand</span><span class="row-val">€ ${genKostenMaand}</span></div>
     </div>
   </div>
 ` : ''}
@@ -3581,7 +3596,7 @@ ${(this._config && this._config.show_generator) ? `
       const v1 = mGkPopup.querySelector('#m-gk-verbr-val');
       const v2 = mGkPopup.querySelector('#m-gk-prijs-val');
       if (v1) v1.textContent = verbr.toFixed(1) + ' L/u';
-      if (v2) v2.textContent = '€ ' + prijs.toFixed(2);
+      if (v2) v2.textContent = '€ ' + prijs.toFixed(3);
     };
     const _mGkSet = (entity, value) => {
       if (this._hass) this._hass.callService('input_number', 'set_value', { entity_id: entity, value: value });
@@ -3592,8 +3607,8 @@ ${(this._config && this._config.show_generator) ? `
       const _mGkBtn = (id, fn) => { const el = mGkPopup.querySelector('#' + id); if (el) el.onclick = (e) => { e.stopPropagation(); fn(); }; };
       _mGkBtn('m-gk-verbr-min', () => { mGkPopup._verbr = Math.max(0.5, (mGkPopup._verbr||3)-0.5); const el=mGkPopup.querySelector('#m-gk-verbr-val'); if(el) el.textContent=mGkPopup._verbr.toFixed(1)+' L/u'; _mGkSet(genVerbruikEntity, mGkPopup._verbr); });
       _mGkBtn('m-gk-verbr-plus', () => { mGkPopup._verbr = Math.min(15, (mGkPopup._verbr||3)+0.5); const el=mGkPopup.querySelector('#m-gk-verbr-val'); if(el) el.textContent=mGkPopup._verbr.toFixed(1)+' L/u'; _mGkSet(genVerbruikEntity, mGkPopup._verbr); });
-      _mGkBtn('m-gk-prijs-min', () => { mGkPopup._prijs = Math.max(0.50, (mGkPopup._prijs||1.80)-0.05); const el=mGkPopup.querySelector('#m-gk-prijs-val'); if(el) el.textContent='€ '+mGkPopup._prijs.toFixed(2); _mGkSet(genDieselPrijsEntity, mGkPopup._prijs); });
-      _mGkBtn('m-gk-prijs-plus', () => { mGkPopup._prijs = Math.min(3.00, (mGkPopup._prijs||1.80)+0.05); const el=mGkPopup.querySelector('#m-gk-prijs-val'); if(el) el.textContent='€ '+mGkPopup._prijs.toFixed(2); _mGkSet(genDieselPrijsEntity, mGkPopup._prijs); });
+      _mGkBtn('m-gk-prijs-min', () => { mGkPopup._prijs = Math.max(0.50, (mGkPopup._prijs||1.80)-0.005); const el=mGkPopup.querySelector('#m-gk-prijs-val'); if(el) el.textContent='€ '+mGkPopup._prijs.toFixed(3); _mGkSet(genDieselPrijsEntity, mGkPopup._prijs); });
+      _mGkBtn('m-gk-prijs-plus', () => { mGkPopup._prijs = Math.min(3.00, (mGkPopup._prijs||1.80)+0.005); const el=mGkPopup.querySelector('#m-gk-prijs-val'); if(el) el.textContent='€ '+mGkPopup._prijs.toFixed(3); _mGkSet(genDieselPrijsEntity, mGkPopup._prijs); });
       if (mGkSluit) mGkSluit.onclick = (e) => { e.stopPropagation(); this._genKostenPopupOpen = false; mGkPopup.style.display = 'none'; };
       mGkPopup.onclick = (e) => { if (e.target === mGkPopup) { this._genKostenPopupOpen = false; mGkPopup.style.display = 'none'; } };
     }
