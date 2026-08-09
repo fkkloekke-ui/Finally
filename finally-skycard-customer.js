@@ -1,9 +1,20 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.4.3
+   Versie: 3.4.4
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.4.4 — Configureerbare achtergrond-map toegevoegd (background_folder).
+   finallySkyImagePath() accepteert nu een basePath-parameter i.p.v. de
+   hardcoded '/local/finally-card/'; standaard blijft dat pad ongewijzigd
+   (geen breaking change voor bestaande installaties). Doel: alternatieve
+   tegel-sets met exact dezelfde bestandsnamen (bv. een camper-variant met
+   gras i.p.v. water) kunnen nu via één config-regel worden aangewezen,
+   zonder aparte codebase of los HACS-bestand:
+     background_folder: /local/finally-card-camper/
+   Config-regel moet per kaart handmatig worden toegevoegd — komt niet
+   automatisch mee bij een HACS-update, die introduceert alleen de optie.
 
    v3.4.3 — Watertank-detectie (onderdeel van Punt B/tanksensoren) alsnog
    gebouwd. Bleek bij nader onderzoek NIET te bestaan als los _detectTanks()
@@ -277,23 +288,24 @@
 // nu rechtstreeks in de kaart zodat klanten geen losse helper-sensor meer hoeven te
 // bouwen. Bestandsnamen volgen de klant-conventie: /local/finally-card/<naam>.png
 // (geen "sky-" prefix — dat was alleen Eriks eigen padnaam).
-function finallySkyImagePath(condition, elev, hour) {
+function finallySkyImagePath(condition, elev, hour, basePath) {
+  const bp = basePath || '/local/finally-card/';
   const isDay = elev >= 0;
   if (!isDay) {
-    if (condition === 'sunny' || condition === 'clear-night') return '/local/finally-card/night-clear.png';
-    if (condition === 'cloudy' || condition === 'overcast') return '/local/finally-card/cloudy-night.png';
-    return '/local/finally-card/partlycloudy-night.png';
+    if (condition === 'sunny' || condition === 'clear-night') return bp + 'night-clear.png';
+    if (condition === 'cloudy' || condition === 'overcast') return bp + 'cloudy-night.png';
+    return bp + 'partlycloudy-night.png';
   }
-  if (elev < 6 && hour < 12) return '/local/finally-card/clear-dawn.png';
-  if (elev < 6 && hour >= 12) return '/local/finally-card/clear-dusk.png';
-  if (condition === 'sunny' || condition === 'clear-night') return '/local/finally-card/clear-day.png';
-  if (condition === 'cloudy' || condition === 'overcast') return '/local/finally-card/cloudy-day.png';
-  if (condition === 'partlycloudy') return '/local/finally-card/partlycloudy-day.png';
-  if (condition === 'rainy' || condition === 'pouring') return '/local/finally-card/rainy-day.png';
-  if (condition === 'lightning' || condition === 'lightning-rainy') return '/local/finally-card/thunderstorm.png';
-  if (condition === 'snowy' || condition === 'snowy-rainy') return '/local/finally-card/snowy-day.png';
-  if (condition === 'fog') return '/local/finally-card/fog-day.png';
-  return '/local/finally-card/partlycloudy-day.png';
+  if (elev < 6 && hour < 12) return bp + 'clear-dawn.png';
+  if (elev < 6 && hour >= 12) return bp + 'clear-dusk.png';
+  if (condition === 'sunny' || condition === 'clear-night') return bp + 'clear-day.png';
+  if (condition === 'cloudy' || condition === 'overcast') return bp + 'cloudy-day.png';
+  if (condition === 'partlycloudy') return bp + 'partlycloudy-day.png';
+  if (condition === 'rainy' || condition === 'pouring') return bp + 'rainy-day.png';
+  if (condition === 'lightning' || condition === 'lightning-rainy') return bp + 'thunderstorm.png';
+  if (condition === 'snowy' || condition === 'snowy-rainy') return bp + 'snowy-day.png';
+  if (condition === 'fog') return bp + 'fog-day.png';
+  return bp + 'partlycloudy-day.png';
 }
 
 class FinallySkyCard extends HTMLElement {
@@ -1295,8 +1307,10 @@ class FinallySkyCard extends HTMLElement {
     // Grid: rechte lijn van links naar boot
     const gridX1 = 390, gridY1 = 694;
 
-    // Achtergrond
-    const skyImg  = hass ? finallySkyImagePath(wcond, parseFloat(_sA.elevation ?? 0), new Date().getHours()) : '/local/finally-card/clear-day.png';
+    // Achtergrond (configureerbaar: background_folder laat een alternatieve tegel-set toe, bv. camper-versie
+    // met exact dezelfde bestandsnamen als de standaard boot-tegels — zie background_path_voorbeeld)
+    const backgroundFolder = (this._config && this._config.background_folder) || '/local/finally-card/';
+    const skyImg  = hass ? finallySkyImagePath(wcond, parseFloat(_sA.elevation ?? 0), new Date().getHours(), backgroundFolder) : backgroundFolder + 'clear-day.png';
 
 
     // Flows actief
@@ -2602,8 +2616,9 @@ class FinallySkyCardMobile extends HTMLElement {
     const tijd  = nu.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' });
     const datum = nu.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long' });
 
-    // ── Achtergrond ──
-    const skyImg  = finallySkyImagePath(wcond, parseFloat(sunElev), new Date().getHours());
+    // ── Achtergrond ── (configureerbaar: background_folder, zie toelichting bij FinallySkyCard)
+    const backgroundFolderM = (this._config && this._config.background_folder) || '/local/finally-card/';
+    const skyImg  = finallySkyImagePath(wcond, parseFloat(sunElev), new Date().getHours(), backgroundFolderM);
 
 
     // ── Sparkline ──
