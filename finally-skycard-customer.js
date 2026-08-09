@@ -1,9 +1,56 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.4.1
+   Versie: 3.4.3
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.4.3 — Watertank-detectie (onderdeel van Punt B/tanksensoren) alsnog
+   gebouwd. Bleek bij nader onderzoek NIET te bestaan als los _detectTanks()
+   met drie routes zoals eerder aangenomen — de wizard had helemaal geen
+   tankdetectie, en zowel de kiosk-sidebar (id="syp-wt") als de mobiele
+   kaart toonden een permanente placeholder ('--'/'—') zonder ooit een
+   echte entity te koppelen. Nu toegevoegd:
+   - wizard-detectie op meerdere kandidaat-patronen (percentage-sensoren
+     met 'tank' in de naam, victron_gx tank_N_level-patroon, Tuya-stijl
+     watertank-sensor) — GEEN van deze patronen is bevestigd op live
+     Cerbo-hardware, dus behandel als best-effort met handmatige
+     invoer-fallback, niet als geverifieerd;
+   - nieuwe config-velden watertank_level_entity (percentage) en
+     watertank_capacity_l (optioneel, voor literweergave — niet
+     automatisch af te leiden, moet handmatig in config);
+   - kiosk- en mobiele Watertank-rij tonen nu echte data i.p.v. een
+     permanente placeholder, mits geconfigureerd.
+   Dieseltank NIET meegenomen — er bestond geen bestaande UI-stub voor
+   (alleen watertank had een dode placeholder-rij), dus dat is een
+   nieuwe UI-toevoeging in plaats van het repareren van iets bestaands;
+   apart oppakken indien gewenst.
+
+   v3.4.2 — Punt B audit afgerond op resterende gaten:
+   1) JK BMS-celdetail (individuele celspanningen, cycli, mos-temp in de
+      accu-popup, kiosk én mobiel) gebruikte nog hardcoded het OUDE
+      Batmon-naampatroon 'jk_bms_N_jk_bms_N_...' van vóór de rename van
+      juni 2026, terwijl SOC/cel-min/max al wél configureerbaar waren.
+      Nieuwe gedeelde config-velden bms1_entity_prefix/bms2_entity_prefix
+      lossen dit consistent op (fallback blijft het oude patroon).
+   2) De wizard (_detectEntities) detecteerde JK BMS 1/2 helemaal niet —
+      SmartShunt/MPPT/Quattro/GX Device/Shelly wel, BMS nooit. Toegevoegd:
+      auto-detectie op het nieuwe patroon (jk_bms_N_*_soc), handmatige
+      invoer-fallback, en opname in de gegenereerde config-YAML + de
+      installatie-samenvatting van stap 5.
+   3) Generator-run-state/runtime-vandaag/runtime-totaal/service-counter
+      waren nog hardcoded terwijl de generator-switch zelf al in v3.3.5
+      configureerbaar was gemaakt — nu consistent met dezelfde
+      config+fallback-pattern (generator_run_state_entity,
+      generator_runtime_today_entity, generator_runtime_total_entity,
+      generator_service_counter_entity).
+   Bevestigd GEEN wijziging nodig: gx_device_*-sensoren (pv_power,
+   dc_battery_power, system_state, ac_input_limit e.d.) zijn universele
+   namen binnen de victron_gx-integratie (bevestigd door de wizard's
+   eigen detectielogica, die op exact deze naam checkt zonder
+   serienummer-variatie); accu_beschikbaar_wh/verwachte_accuduur hebben
+   al een correcte berekende fallback via battery_capacity_wh/
+   battery_min_soc_pct.
 
    v3.4.1 — Regressie uit v3.3.9 gefixt: de mobiele dieselkosten-
    instellingen-popup (_genKostenPopupOpen) miste de guard in de
@@ -679,6 +726,14 @@ class FinallySkyCard extends HTMLElement {
     const genVerbruikEntityP = (this._config && this._config.generator_verbruik_entity) || 'input_number.generator_verbruik_lh';
     const genDieselPrijsEntityP = (this._config && this._config.generator_diesel_prijs_entity) || 'input_number.generator_diesel_prijs';
     const genRuntimeMaandEntityP = (this._config && this._config.generator_runtime_maand_entity) || 'sensor.generator_draaiuren_maand';
+    const genRunStateEntityP = (this._config && this._config.generator_run_state_entity) || 'sensor.generator_start_stop_run_state';
+    // BMS entity-prefix (configureerbaar; fallback is Eriks eigen OUDE Batmon-naamgeving van vóór de rename
+    // van juni 2026 — nieuwe klantinstallaties moeten dit expliciet instellen, zie _detectBMS() in de wizard)
+    const bms1PrefixP = (this._config && this._config.bms1_entity_prefix) || 'jk_bms_1_jk_bms_1';
+    const bms2PrefixP = (this._config && this._config.bms2_entity_prefix) || 'jk_bms_2_jk_bms_2';
+    // Watertank (configureerbaar; geen betrouwbare universele default — ongeconfigureerd blijft de tegel '--')
+    const watertankLevelEntityP = this._config && this._config.watertank_level_entity;
+    const watertankCapacityLP = this._config && this._config.watertank_capacity_l;
 
     if (id === 'energie') {
       const lW=_s('sensor.gx_device_consumption_power_l1'), pW=_s('sensor.gx_device_pv_power'),
@@ -759,7 +814,7 @@ class FinallySkyCard extends HTMLElement {
       const cBg =(v)=>v===0?'rgba(255,255,255,0.03)':v<3.25?'rgba(255,60,60,0.12)':v<3.30?'rgba(255,150,0,0.12)':'rgba(0,200,80,0.10)';
       const cBrd=(v)=>v===0?'rgba(255,255,255,0.08)':v<3.25?'rgba(255,60,60,0.5)':v<3.30?'rgba(255,150,0,0.5)':'rgba(0,200,80,0.35)';
       ['b1','b2'].forEach(b=>{
-        const p=b==='b1'?'jk_bms_1_jk_bms_1':'jk_bms_2_jk_bms_2';
+        const p=b==='b1'?bms1PrefixP:bms2PrefixP;
         const tp=b==='b1'?'bms1_temperatuur_netjes':'bms2_temperatuur_netjes';
         T('ap-'+b+'soc',_s('sensor.'+p+'_soc').toFixed(0)+'%');
         const d=(_s('sensor.'+p+'_cell_volt_max')-_s('sensor.'+p+'_cell_volt_min')).toFixed(3);
@@ -779,7 +834,7 @@ class FinallySkyCard extends HTMLElement {
     }
         else if (id === 'generator') {
       const ok=['ok','Ok','0','','false','no alarm','No alarm','No Alarm','no_alarm'];
-      const gs=_st('sensor.generator_start_stop_run_state'), aan=gs==='running';
+      const gs=_st(genRunStateEntityP), aan=gs==='running';
       T('gp-staat',aan?'● RUNNING':'○ GESTOPT'); C('gp-staat',aan?'#00ff88':'rgba(255,255,255,0.4)');
       T('gp-sub',gs);
       T('gp-acv',_s(quattroInputVoltageL1Entity).toFixed(0)+' V');
@@ -800,11 +855,16 @@ class FinallySkyCard extends HTMLElement {
       T('syp-fw',_st('sensor.gx_device_installed_version'));
       T('syp-state',_st('sensor.gx_device_system_state'));
       T('syp-mppt',_st(mpptStateEntity));
-      T('syp-gen',_st('sensor.generator_start_stop_run_state'));
+      T('syp-gen',_st(genRunStateEntityP));
       T('syp-acv',_s(quattroOutputVoltageL1Entity).toFixed(0)+' V');
       T('syp-ach',_s(quattroOutputFrequencyL1Entity).toFixed(1)+' Hz');
       T('syp-dcv',_s(quattroDcVoltageEntity).toFixed(1)+' V');
       T('syp-w',_s(quattroOutputPowerL1Entity).toFixed(0)+' W');
+      if (watertankLevelEntityP) {
+        const pct = _s(watertankLevelEntityP);
+        const litersTxt = watertankCapacityLP ? ' ('+Math.round(pct/100*watertankCapacityLP)+' L)' : '';
+        T('syp-wt', pct.toFixed(0)+'%'+litersTxt);
+      }
     }
   }
 
@@ -999,16 +1059,20 @@ class FinallySkyCard extends HTMLElement {
   }
 
   _render() {
-    const bms1CellMinEntity = (this._config && this._config.bms1_cell_min_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_min';
-    const bms1CellMaxEntity = (this._config && this._config.bms1_cell_max_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_max';
-    const bms1SocEntity = (this._config && this._config.bms1_soc_entity) || 'sensor.jk_bms_1_jk_bms_1_soc';
-    const bms1CyclesEntity = (this._config && this._config.bms1_cycles_entity) || 'sensor.jk_bms_1_jk_bms_1_num_cycles';
-    const bms1MosTempEntity = (this._config && this._config.bms1_mos_temp_entity) || 'sensor.jk_bms_1_jk_bms_1_mos_temperature';
-    const bms2CellMinEntity = (this._config && this._config.bms2_cell_min_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_min';
-    const bms2CellMaxEntity = (this._config && this._config.bms2_cell_max_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_max';
-    const bms2SocEntity = (this._config && this._config.bms2_soc_entity) || 'sensor.jk_bms_2_jk_bms_2_soc';
-    const bms2CyclesEntity = (this._config && this._config.bms2_cycles_entity) || 'sensor.jk_bms_2_jk_bms_2_num_cycles';
-    const bms2MosTempEntity = (this._config && this._config.bms2_mos_temp_entity) || 'sensor.jk_bms_2_jk_bms_2_mos_temperature';
+    // BMS entity-prefix (configureerbaar; fallback is Eriks eigen OUDE Batmon-naamgeving van vóór de rename
+    // van juni 2026 — nieuwe klantinstallaties moeten dit expliciet instellen, zie _detectBMS() in de wizard)
+    const bms1Prefix = (this._config && this._config.bms1_entity_prefix) || 'jk_bms_1_jk_bms_1';
+    const bms2Prefix = (this._config && this._config.bms2_entity_prefix) || 'jk_bms_2_jk_bms_2';
+    const bms1CellMinEntity = (this._config && this._config.bms1_cell_min_entity) || ('sensor.' + bms1Prefix + '_cell_volt_min');
+    const bms1CellMaxEntity = (this._config && this._config.bms1_cell_max_entity) || ('sensor.' + bms1Prefix + '_cell_volt_max');
+    const bms1SocEntity = (this._config && this._config.bms1_soc_entity) || ('sensor.' + bms1Prefix + '_soc');
+    const bms1CyclesEntity = (this._config && this._config.bms1_cycles_entity) || ('sensor.' + bms1Prefix + '_num_cycles');
+    const bms1MosTempEntity = (this._config && this._config.bms1_mos_temp_entity) || ('sensor.' + bms1Prefix + '_mos_temperature');
+    const bms2CellMinEntity = (this._config && this._config.bms2_cell_min_entity) || ('sensor.' + bms2Prefix + '_cell_volt_min');
+    const bms2CellMaxEntity = (this._config && this._config.bms2_cell_max_entity) || ('sensor.' + bms2Prefix + '_cell_volt_max');
+    const bms2SocEntity = (this._config && this._config.bms2_soc_entity) || ('sensor.' + bms2Prefix + '_soc');
+    const bms2CyclesEntity = (this._config && this._config.bms2_cycles_entity) || ('sensor.' + bms2Prefix + '_num_cycles');
+    const bms2MosTempEntity = (this._config && this._config.bms2_mos_temp_entity) || ('sensor.' + bms2Prefix + '_mos_temperature');
     const bms1TempNetjesEntity = (this._config && this._config.bms1_temp_netjes_entity) || 'sensor.bms1_temperatuur_netjes';
     const bms2TempNetjesEntity = (this._config && this._config.bms2_temp_netjes_entity) || 'sensor.bms2_temperatuur_netjes';
     const indoorTempEntity = (this._config && this._config.indoor_temp_entity) || 'sensor.ewelink_snzb_02p_temperatuur';
@@ -1118,12 +1182,15 @@ class FinallySkyCard extends HTMLElement {
                       sysState === 'passthru' ? 'WALSTROOM' : sysState.toUpperCase();
 
     // ── Extra ──
-    const genState   = hass ? st('sensor.generator_start_stop_run_state') : '--';
+    const generatorRunStateEntity = (this._config && this._config.generator_run_state_entity) || 'sensor.generator_start_stop_run_state';
+    const generatorRuntimeTodayEntity = (this._config && this._config.generator_runtime_today_entity) || 'sensor.generator_start_stop_today_runtime';
+    const generatorRuntimeTotalEntity = (this._config && this._config.generator_runtime_total_entity) || 'sensor.generator_start_stop_total_runtime';
+    const genState   = hass ? st(generatorRunStateEntity) : '--';
     const genActive  = genState === 'running';
     const generatorSwitchEntity = (this._config && this._config.generator_switch_entity) || 'switch.generator_start_stop_manual_start';
     const genManualOn    = hass ? st(generatorSwitchEntity) : 'off';
-    const genRuntimeToday = hass ? s('sensor.generator_start_stop_today_runtime').toFixed(1) : '--';
-    const genRuntimeTotal = hass ? s('sensor.generator_start_stop_total_runtime').toFixed(0) : '--';
+    const genRuntimeToday = hass ? s(generatorRuntimeTodayEntity).toFixed(1) : '--';
+    const genRuntimeTotal = hass ? s(generatorRuntimeTotalEntity).toFixed(0) : '--';
     const kabolaEntity     = (this._config && this._config.kabola_climate_entity) || 'climate.kabola';
     const kabolaState      = hass ? hass.states[kabolaEntity] : null;
     const kabolaActief     = kabolaState ? (kabolaState.state !== 'off' && kabolaState.state !== 'unavailable') : false;
@@ -2279,16 +2346,20 @@ class FinallySkyCardMobile extends HTMLElement {
   _deltaColor(d) { return d < 0.010 ? '#00ff88' : d < 0.020 ? '#ffd700' : '#ff4444'; }
 
   _render() {
-    const bms1CellMinEntity = (this._config && this._config.bms1_cell_min_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_min';
-    const bms1CellMaxEntity = (this._config && this._config.bms1_cell_max_entity) || 'sensor.jk_bms_1_jk_bms_1_cell_volt_max';
-    const bms1SocEntity = (this._config && this._config.bms1_soc_entity) || 'sensor.jk_bms_1_jk_bms_1_soc';
-    const bms1CyclesEntity = (this._config && this._config.bms1_cycles_entity) || 'sensor.jk_bms_1_jk_bms_1_num_cycles';
-    const bms1MosTempEntity = (this._config && this._config.bms1_mos_temp_entity) || 'sensor.jk_bms_1_jk_bms_1_mos_temperature';
-    const bms2CellMinEntity = (this._config && this._config.bms2_cell_min_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_min';
-    const bms2CellMaxEntity = (this._config && this._config.bms2_cell_max_entity) || 'sensor.jk_bms_2_jk_bms_2_cell_volt_max';
-    const bms2SocEntity = (this._config && this._config.bms2_soc_entity) || 'sensor.jk_bms_2_jk_bms_2_soc';
-    const bms2CyclesEntity = (this._config && this._config.bms2_cycles_entity) || 'sensor.jk_bms_2_jk_bms_2_num_cycles';
-    const bms2MosTempEntity = (this._config && this._config.bms2_mos_temp_entity) || 'sensor.jk_bms_2_jk_bms_2_mos_temperature';
+    // BMS entity-prefix (configureerbaar; fallback is Eriks eigen OUDE Batmon-naamgeving van vóór de rename
+    // van juni 2026 — nieuwe klantinstallaties moeten dit expliciet instellen, zie _detectBMS() in de wizard)
+    const bms1Prefix = (this._config && this._config.bms1_entity_prefix) || 'jk_bms_1_jk_bms_1';
+    const bms2Prefix = (this._config && this._config.bms2_entity_prefix) || 'jk_bms_2_jk_bms_2';
+    const bms1CellMinEntity = (this._config && this._config.bms1_cell_min_entity) || ('sensor.' + bms1Prefix + '_cell_volt_min');
+    const bms1CellMaxEntity = (this._config && this._config.bms1_cell_max_entity) || ('sensor.' + bms1Prefix + '_cell_volt_max');
+    const bms1SocEntity = (this._config && this._config.bms1_soc_entity) || ('sensor.' + bms1Prefix + '_soc');
+    const bms1CyclesEntity = (this._config && this._config.bms1_cycles_entity) || ('sensor.' + bms1Prefix + '_num_cycles');
+    const bms1MosTempEntity = (this._config && this._config.bms1_mos_temp_entity) || ('sensor.' + bms1Prefix + '_mos_temperature');
+    const bms2CellMinEntity = (this._config && this._config.bms2_cell_min_entity) || ('sensor.' + bms2Prefix + '_cell_volt_min');
+    const bms2CellMaxEntity = (this._config && this._config.bms2_cell_max_entity) || ('sensor.' + bms2Prefix + '_cell_volt_max');
+    const bms2SocEntity = (this._config && this._config.bms2_soc_entity) || ('sensor.' + bms2Prefix + '_soc');
+    const bms2CyclesEntity = (this._config && this._config.bms2_cycles_entity) || ('sensor.' + bms2Prefix + '_num_cycles');
+    const bms2MosTempEntity = (this._config && this._config.bms2_mos_temp_entity) || ('sensor.' + bms2Prefix + '_mos_temperature');
     const bms1TempNetjesEntity = (this._config && this._config.bms1_temp_netjes_entity) || 'sensor.bms1_temperatuur_netjes';
     const bms2TempNetjesEntity = (this._config && this._config.bms2_temp_netjes_entity) || 'sensor.bms2_temperatuur_netjes';
     const indoorHumidityEntity = (this._config && this._config.indoor_humidity_entity) || 'sensor.ewelink_snzb_02p_luchtvochtigheid';
@@ -2296,6 +2367,12 @@ class FinallySkyCardMobile extends HTMLElement {
     const douchepompSwitchEntity = (this._config && this._config.douchepomp_switch_entity) || 'switch.shellyplus1_78ee4cc39480';
     const waterhoogteEntity = (this._config && this._config.waterhoogte_entity) || 'sensor.hasselt_zwarte_water_waterhoogte';
     const waterhoogteVerwachtEntity = (this._config && this._config.waterhoogte_verwacht_entity) || 'sensor.hasselt_zwarte_water_waterhoogte_verwacht';
+    // Watertank (configureerbaar; geen betrouwbare universele default — ongeconfigureerd blijft de tegel '—')
+    const watertankLevelEntity = this._config && this._config.watertank_level_entity;
+    const watertankCapacityL = this._config && this._config.watertank_capacity_l;
+    const watertankPct = watertankLevelEntity ? s(watertankLevelEntity) : null;
+    const watertankTxt = watertankPct == null ? '—' :
+      watertankPct.toFixed(0) + '%' + (watertankCapacityL ? ' (' + Math.round(watertankPct/100*watertankCapacityL) + ' L)' : '');
     const weerTekstEntity = (this._config && this._config.weer_tekst_entity) || 'sensor.knmi_tekst';
     const weerCodeEntity = (this._config && this._config.weer_code_entity) || 'sensor.knmi_weercode';
     const sunNextRisingEntity = (this._config && this._config.sun_next_rising_entity) || 'sensor.sun_next_rising';
@@ -2451,12 +2528,16 @@ class FinallySkyCardMobile extends HTMLElement {
     // ── Verwarming ──
 
     // ── Overig ──
-    const genActive  = st('sensor.generator_start_stop_run_state') === 'running';
-    const genState   = st('sensor.generator_start_stop_run_state');
+    const generatorRunStateEntity = (this._config && this._config.generator_run_state_entity) || 'sensor.generator_start_stop_run_state';
+    const generatorRuntimeTodayEntity = (this._config && this._config.generator_runtime_today_entity) || 'sensor.generator_start_stop_today_runtime';
+    const generatorRuntimeTotalEntity = (this._config && this._config.generator_runtime_total_entity) || 'sensor.generator_start_stop_total_runtime';
+    const generatorServiceCounterEntity = (this._config && this._config.generator_service_counter_entity) || 'sensor.generator_start_stop_service_counter';
+    const genActive  = st(generatorRunStateEntity) === 'running';
+    const genState   = st(generatorRunStateEntity);
     const generatorSwitchEntity = (this._config && this._config.generator_switch_entity) || 'switch.generator_start_stop_manual_start';
     const genManualOn    = st(generatorSwitchEntity);
-    const genRuntimeToday = s('sensor.generator_start_stop_today_runtime').toFixed(1);
-    const genRuntimeTotal = s('sensor.generator_start_stop_total_runtime').toFixed(0);
+    const genRuntimeToday = s(generatorRuntimeTodayEntity).toFixed(1);
+    const genRuntimeTotal = s(generatorRuntimeTotalEntity).toFixed(0);
     const genVerbruikEntity = (this._config && this._config.generator_verbruik_entity) || 'input_number.generator_verbruik_lh';
     const genDieselPrijsEntity = (this._config && this._config.generator_diesel_prijs_entity) || 'input_number.generator_diesel_prijs';
     const genRuntimeMaandEntity = (this._config && this._config.generator_runtime_maand_entity) || 'sensor.generator_draaiuren_maand';
@@ -2465,7 +2546,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const genRuntimeMaand = s(genRuntimeMaandEntity).toFixed(1);
     const genKostenMaand = (parseFloat(genRuntimeMaand) * genVerbruik * genDieselPrijs).toFixed(2);
     const genKostenVandaag = (parseFloat(genRuntimeToday) * genVerbruik * genDieselPrijs).toFixed(2);
-    const genServiceCounter = s('sensor.generator_start_stop_service_counter').toFixed(0);
+    const genServiceCounter = s(generatorServiceCounterEntity).toFixed(0);
     const windEntity  = (this._config && this._config.wind_entity) || 'sensor.wind_vermogen';
     const windW       = s(windEntity).toFixed(0);
     const kabolaEntity      = (this._config && this._config.kabola_climate_entity) || 'climate.kabola';
@@ -2936,7 +3017,7 @@ class FinallySkyCardMobile extends HTMLElement {
       <div class="row"><span class="row-lbl">Delta</span><span class="row-val" style="color:${this._deltaColor(parseFloat(bms1Delta))}">Δ ${bms1Delta} V</span></div>
       <div class="row"><span class="row-lbl">Temp / MOS</span><span class="row-val">${bms1Temp}° / ${bms1MosT}°C</span></div>
       <div class="row"><span class="row-lbl">Cycli</span><span class="row-val">${bms1Cycli}</span></div>
-      ${celRow(1, 'jk_bms_1_jk_bms_1')}
+      ${celRow(1, bms1Prefix)}
     </div>
 
     <!-- BMS 2 -->
@@ -2949,7 +3030,7 @@ class FinallySkyCardMobile extends HTMLElement {
       <div class="row"><span class="row-lbl">Delta</span><span class="row-val" style="color:${this._deltaColor(parseFloat(bms2Delta))}">Δ ${bms2Delta} V</span></div>
       <div class="row"><span class="row-lbl">Temp / MOS</span><span class="row-val">${bms2Temp}° / ${bms2MosT}°C</span></div>
       <div class="row"><span class="row-lbl">Cycli</span><span class="row-val">${bms2Cycli}</span></div>
-      ${celRow(2, 'jk_bms_2_jk_bms_2')}
+      ${celRow(2, bms2Prefix)}
     </div>
     `}
   </div>
@@ -3052,7 +3133,7 @@ ${(this._config && this._config.show_kabola) ? `
       <div class="row">
         <span class="row-lbl">Watertank</span>
         <div style="text-align:right">
-<span class="row-val">—</span>
+<span class="row-val">${watertankTxt}</span>
         </div>
       </div>
       `}
@@ -4253,6 +4334,40 @@ class FinallyWizard extends HTMLElement {
       results.push({ key:'cerbo', found: false, name: 'GX Device', id: 'niet gevonden' });
     }
 
+    // JK BMS 1 & 2 — zoek op patroon jk_bms_N_<alias>_soc (naamgeving sinds de Batmon-rename van juni 2026;
+    // vóór die rename heette dit sensor.jk_bms_N_jk_bms_N_soc, wat NIET meer als universele default geldt)
+    const bms1E = allKeys.find(e => /^sensor\.jk_bms_1_.+_soc$/.test(e));
+    if (bms1E) {
+      const prefix = bms1E.replace(/^sensor\./, '').replace(/_soc$/, '');
+      s.serials.bms1 = prefix;
+      s.entities.bms1Prefix = prefix;
+      results.push({ key:'bms1', found: true, name: 'JK BMS 1', id: prefix });
+    } else {
+      results.push({ key:'bms1', found: false, name: 'JK BMS 1', id: s.manualSerials.bms1 || '' });
+    }
+    const bms2E = allKeys.find(e => /^sensor\.jk_bms_2_.+_soc$/.test(e));
+    if (bms2E) {
+      const prefix = bms2E.replace(/^sensor\./, '').replace(/_soc$/, '');
+      s.serials.bms2 = prefix;
+      s.entities.bms2Prefix = prefix;
+      results.push({ key:'bms2', found: true, name: 'JK BMS 2', id: prefix });
+    } else {
+      results.push({ key:'bms2', found: false, name: 'JK BMS 2', id: s.manualSerials.bms2 || '' });
+    }
+
+    // Watertank — patroon nog niet bevestigd op live Cerbo-tanksysteem, dus breed zoeken op
+    // meerdere mogelijke naamgevingen (officiële victron_gx tank-integratie, Tuya-niveausensor, generiek).
+    // Percentage-sensoren de voorkeur geven boven liter-sensoren zodat capaciteit apart configureerbaar blijft.
+    let tankE = allKeys.find(e => /^sensor\..*tank.*(niveau|level)/i.test(e) && states[e]?.attributes?.unit_of_measurement === '%');
+    if (!tankE) tankE = allKeys.find(e => /^sensor\.gx_device_tank_\d+_level/.test(e));
+    if (!tankE) tankE = allKeys.find(e => /watertank/i.test(e) && states[e]?.attributes?.unit_of_measurement === '%');
+    if (tankE) {
+      s.entities.watertankLevel = tankE;
+      results.push({ key:'tank', found: true, name: 'Watertank', id: tankE });
+    } else {
+      results.push({ key:'tank', found: false, name: 'Watertank', id: s.manualSerials.tank || '' });
+    }
+
     // Shelly
     const shellyE = allKeys.find(e => e.startsWith('switch.shelly'));
     if (shellyE) {
@@ -4266,7 +4381,7 @@ class FinallyWizard extends HTMLElement {
     const list = this.shadowRoot.getElementById('det-list');
     if (list) {
       list.innerHTML = results.map(r => {
-        const needsManual = !r.found && ['shunt','mppt','quattro'].includes(r.key);
+        const needsManual = !r.found && ['shunt','mppt','quattro','bms1','bms2','tank'].includes(r.key);
         return '<div class="det-item ' + (r.found ? 'found' : needsManual ? 'manual' : 'missing') + '">' +
           '<div style="flex:1">' +
           '<div class="di-name">' + r.name + '</div>' +
@@ -4297,6 +4412,17 @@ class FinallyWizard extends HTMLElement {
             s.serials.quattro = serial;
             s.entities.acInV = 'sensor.' + serial + '_input_voltage_l1';
             s.entities.acInW = 'sensor.' + serial + '_input_power_l1';
+          }
+          if (key === 'bms1' && e.target.value.trim()) {
+            s.serials.bms1 = e.target.value.trim();
+            s.entities.bms1Prefix = e.target.value.trim();
+          }
+          if (key === 'bms2' && e.target.value.trim()) {
+            s.serials.bms2 = e.target.value.trim();
+            s.entities.bms2Prefix = e.target.value.trim();
+          }
+          if (key === 'tank' && e.target.value.trim()) {
+            s.entities.watertankLevel = e.target.value.trim();
           }
         });
       });
@@ -4339,6 +4465,9 @@ class FinallyWizard extends HTMLElement {
       ['quattro_output_power_l1_entity', e.quattroOutputPowerL1],
       ['quattro_output_voltage_l1_entity', e.quattroOutputVoltageL1],
       ['quattro_overload_alarm_entity', e.quattroOverloadAlarm],
+      ['bms1_entity_prefix', e.bms1Prefix],
+      ['bms2_entity_prefix', e.bms2Prefix],
+      ['watertank_level_entity', e.watertankLevel],
     ];
     const lines = map.filter(([, val]) => !!val).map(([key, val]) => key + ': ' + val);
     return lines.join('\n');
@@ -4360,13 +4489,16 @@ class FinallyWizard extends HTMLElement {
       '<div class="fr"><span class="fk">MPPT</span><span class="fv ' + status(s.serials.mppt) + '">' + txt(s.serials.mppt) + '</span></div>' +
       '<div class="fr"><span class="fk">Quattro/Multi</span><span class="fv ' + status(s.serials.quattro) + '">' + txt(s.serials.quattro) + '</span></div>' +
       '<div class="fr"><span class="fk">GX Device</span><span class="fv ' + status(s.entities.load) + '">' + (s.entities.load ? '&#10003; gevonden' : '— niet gevonden') + '</span></div>' +
+      '<div class="fr"><span class="fk">JK BMS 1</span><span class="fv ' + status(s.entities.bms1Prefix) + '">' + txt(s.entities.bms1Prefix) + '</span></div>' +
+      '<div class="fr"><span class="fk">JK BMS 2</span><span class="fv ' + status(s.entities.bms2Prefix) + '">' + txt(s.entities.bms2Prefix) + '</span></div>' +
+      '<div class="fr"><span class="fk">Watertank</span><span class="fv ' + status(s.entities.watertankLevel) + '">' + txt(s.entities.watertankLevel) + '</span></div>' +
       '<div class="fr"><span class="fk">Walstroom</span><span class="fv ' + status(s.serials.shelly) + '">' + txt(s.serials.shelly) + '</span></div>' +
       '<div class="fr"><span class="fk">Foto</span><span class="fv ' + (s.fotoDataUrl ? 'ok' : 'warn') + '">' + (s.fotoDataUrl ? '&#10003; geüpload' : '— geen foto') + '</span></div>' +
       '</div>' +
       '<div class="msg ok" style="margin-top:12px" id="save-msg">Klaar om op te slaan.</div>' +
       (this._buildEntityConfigYaml()
         ? '<div style="margin-top:14px">' +
-          '<p class="sub" style="margin-bottom:6px">Plak deze regels in de <code>this._config</code> van je dashboard-kaart (onder de bestaande instellingen). Dit koppelt de kaart aan de zojuist gedetecteerde SmartShunt/MPPT/Quattro op dit schip in plaats van aan Eriks eigen serienummers:</p>' +
+          '<p class="sub" style="margin-bottom:6px">Plak deze regels in de <code>this._config</code> van je dashboard-kaart (onder de bestaande instellingen). Dit koppelt de kaart aan de zojuist gedetecteerde SmartShunt/MPPT/Quattro op dit schip in plaats van aan Eriks eigen serienummers. Voeg bij een gevonden watertank ook handmatig <code>watertank_capacity_l: &lt;liters&gt;</code> toe — dat kan niet automatisch worden afgeleid:</p>' +
           '<textarea id="entity-config-yaml" readonly style="width:100%;min-height:180px;font-family:monospace;font-size:12px;background:rgba(0,0,0,0.3);color:#aaffcc;border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px;box-sizing:border-box" onclick="this.select()">' + this._buildEntityConfigYaml() + '</textarea>' +
           '<button class="btn btn-s" style="margin-top:6px" data-action="copy-config">&#128203; Kopieer naar klembord</button>' +
           '<span id="copy-msg" style="margin-left:8px;font-size:12px;color:#aaffcc"></span>' +
