@@ -1,9 +1,18 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.4.4
+   Versie: 3.4.5
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.4.5 — Fix op v3.4.4: boot.png (de bootillustratie bovenop de
+   weer-achtergrond, kiosk én mobiel) was nog hardcoded naar
+   '/local/finally-card/boot.png' en volgde NIET mee met background_folder.
+   Gevolg: met een alternatieve achtergrond-map (bv. camper-thema) bleef
+   er toch een boot overheen liggen. Nu volgt boot.png de background_folder
+   mee — dus elke thema-map heeft ook zijn eigen boot.png nodig (zelfde
+   bestandsnaam, andere illustratie, bv. een camper/bus-silhouet voor de
+   camper-map).
 
    v3.4.4 — Configureerbare achtergrond-map toegevoegd (background_folder).
    finallySkyImagePath() accepteert nu een basePath-parameter i.p.v. de
@@ -1424,7 +1433,7 @@ class FinallySkyCard extends HTMLElement {
  <div class="design-canvas" id="design-canvas">
   <img class="bg" src="${skyImg}"/>
   ${(this._config && this._config.bg_darken) ? `<div style="position:absolute;inset:0;z-index:1;background:rgba(0,0,10,${this._config.bg_darken});pointer-events:none"></div>` : ''}
-  <img src="/local/finally-card/boot.png" style="position:absolute;bottom:18%;left:35%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
+  <img src="${backgroundFolder}boot.png" style="position:absolute;bottom:18%;left:35%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
 
   <!-- Erik op SUP — alleen bij mooi weer -->
   ${(wcond === 'sunny' || wcond === 'partlycloudy') && sunAbove ? `
@@ -2898,7 +2907,7 @@ class FinallySkyCardMobile extends HTMLElement {
   <!-- ══ HERO ══ -->
   <div class="hero">
     <img class="hero-bg" src="${skyImg}"/>
-    <img src="/local/finally-card/boot.png" style="position:absolute;bottom:${(this._config && this._config.hero_boat_bottom) || 20}%;left:50%;transform:translateX(-50%);width:${(this._config && this._config.hero_boat_size_pct) || 62}%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
+    <img src="${backgroundFolderM}boot.png" style="position:absolute;bottom:${(this._config && this._config.hero_boat_bottom) || 20}%;left:50%;transform:translateX(-50%);width:${(this._config && this._config.hero_boat_size_pct) || 62}%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <div class="hero-top">
