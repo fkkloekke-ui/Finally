@@ -1,9 +1,24 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.4.6
+   Versie: 3.5.0
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.5.0 — Nieuwe wizard-stap: "Overige sensoren" (Zigbee/Tuya/MQTT/
+   ESPHome). Victron-detectie werkt op vaste namen die de integratie zelf
+   bepaalt (betrouwbaar te raden). Zigbee/Tuya-entiteiten krijgen hun naam
+   echter van de installateur zelf bij het koppelen — daar is dus niets
+   betrouwbaars op te raden. In plaats van te gokken toont deze nieuwe
+   stap alle nog niet-toegewezen entiteiten uit deze platforms (via
+   config/entity_registry/list, gegroepeerd per platform) met een
+   dropdown per entity om 'm aan een rol toe te wijzen (binnentemp,
+   luchtvochtigheid, windrichting, verwarming, douchepomp, watertank-
+   override). Wizard is hernummerd van 5 naar 6 stappen (nieuwe stap 4,
+   Foto/Voltooien geworden stap 5/6). Toegewezen rollen komen automatisch
+   mee in de gegenereerde config-YAML op de afrondingspagina, met een
+   guard tegen dubbele/tegenstrijdige sleutels als een rol al via
+   auto-detectie was ingevuld (bv. watertank_level_entity).
 
    v3.4.6 — Extra bij v3.4.5: bestandsnaam van de voorgrond-illustratie
    (voorheen altijd 'boot.png') is nu ook los configureerbaar via
@@ -3833,6 +3848,7 @@ class FinallyWizard extends HTMLElement {
       serials: {},
       entities: {},
       manualSerials: {},
+      otherRoles: {},
       detectMode: 'lokaal',
       vrm: { portalId: '', token: '', idSite: null, devices: [] }
     };
@@ -4066,13 +4082,14 @@ class FinallyWizard extends HTMLElement {
 
   _updateSteps() {
     const n = this._step;
+    const total = 6;
     const stepsEl = this.shadowRoot.getElementById('wiz-steps');
     let html = '';
-    for (let i = 1; i <= 5; i++) {
+    for (let i = 1; i <= total; i++) {
       const cls = i < n ? 'sd done' : i === n ? 'sd active' : 'sd';
       const txt = i < n ? '&#10003;' : i;
       html += '<div class="' + cls + '">' + txt + '</div>';
-      if (i < 5) html += '<div class="sl' + (i < n ? ' done' : '') + '"></div>';
+      if (i < total) html += '<div class="sl' + (i < n ? ' done' : '') + '"></div>';
     }
     stepsEl.innerHTML = html;
   }
@@ -4084,6 +4101,7 @@ class FinallyWizard extends HTMLElement {
     else if (this._step === 3) this._renderStep3(c);
     else if (this._step === 4) this._renderStep4(c);
     else if (this._step === 5) this._renderStep5(c);
+    else if (this._step === 6) this._renderStep6(c);
   }
 
   _goStep(n) {
@@ -4091,6 +4109,7 @@ class FinallyWizard extends HTMLElement {
     this._updateSteps();
     this._renderStep();
     if (n === 3 && this._state.detectMode === 'lokaal') this._detectEntities();
+    if (n === 4) this._fetchOtherEntities();
   }
 
   _renderStep1(c) {
@@ -4465,6 +4484,100 @@ class FinallyWizard extends HTMLElement {
   }
 
   _renderStep4(c) {
+    c.innerHTML = '<h2>Overige sensoren</h2>' +
+      '<p class="sub">Zigbee-, Tuya- en andere niet-Victron sensoren die je eventueel wilt koppelen (binnentemperatuur, windrichting, verwarming, douchepomp, etc). Volledig optioneel — sla over als niet van toepassing.</p>' +
+      '<div id="other-list"><div class="msg info"><span class="spinner"></span>Entiteiten ophalen...</div></div>' +
+      '<div class="btn-row">' +
+      '<button class="btn btn-s" data-action="step" data-n="3">‹ Terug</button>' +
+      '<button class="btn btn-p" data-action="step" data-n="5">Volgende ›</button>' +
+      '</div>';
+  }
+
+  async _fetchOtherEntities() {
+    const list = this.shadowRoot.getElementById('other-list');
+    if (!list) return;
+    if (!this._hass) {
+      list.innerHTML = '<div class="msg err">Geen verbinding met Home Assistant beschikbaar.</div>';
+      return;
+    }
+    list.innerHTML = '<div class="msg info"><span class="spinner"></span>Entiteiten ophalen...</div>';
+    try {
+      const registry = await this._hass.callWS({ type: 'config/entity_registry/list' });
+      // Entiteiten die al bij Victron/BMS/Watertank/Shelly zijn toegewezen (stap 3) niet nogmaals tonen
+      const known = new Set(Object.values(this._state.entities).filter(v => typeof v === 'string'));
+      // Voor de zekerheid ook uitsluiten op naampatroon, mocht een Victron-achtige entity niet in s.entities zitten
+      const excludePattern = /^(sensor|switch|number)\.(gx_device_|quattro_|multiplus_|smartsolar_|smartshunt_|jk_bms_|shelly)/i;
+      const relevantDomains = ['sensor', 'binary_sensor', 'switch', 'climate'];
+      // Platforms die doorgaans "eigen" installateur-gekozen entity-namen hebben — niet met zekerheid te
+      // raden zoals de Victron-namen, dus hier tonen we ze als keuzelijst i.p.v. te proberen te detecteren
+      const relevantPlatforms = ['tuya', 'tuya_local', 'zha', 'zigbee2mqtt', 'mqtt', 'esphome'];
+      const groups = {};
+      registry.forEach(entry => {
+        if (!entry || entry.disabled_by) return;
+        const domain = entry.entity_id.split('.')[0];
+        if (!relevantDomains.includes(domain)) return;
+        if (known.has(entry.entity_id)) return;
+        if (excludePattern.test(entry.entity_id)) return;
+        const platform = entry.platform || '';
+        if (!relevantPlatforms.includes(platform)) return;
+        if (!groups[platform]) groups[platform] = [];
+        groups[platform].push(entry.entity_id);
+      });
+      this._otherEntityGroups = groups;
+      this._renderOtherEntities();
+    } catch (err) {
+      list.innerHTML = '<div class="msg err">Kon entiteiten-register niet ophalen: ' + (err && err.message ? err.message : err) + '</div>';
+    }
+  }
+
+  _otherRoleOptions() {
+    return [
+      ['', '— niet gebruiken —'],
+      ['indoor_temp_entity', 'Binnentemperatuur'],
+      ['indoor_humidity_entity', 'Binnenluchtvochtigheid'],
+      ['wind_direction_entity', 'Windrichting'],
+      ['wind_entity', 'Windvermogen/snelheid'],
+      ['heating_climate_entity', 'Verwarming (climate)'],
+      ['kabola_climate_entity', 'Kabola-thermostaat (climate)'],
+      ['douchepomp_switch_entity', 'Douchepomp (switch)'],
+      ['watertank_level_entity', 'Watertank niveau (override)'],
+    ];
+  }
+
+  _renderOtherEntities() {
+    const list = this.shadowRoot.getElementById('other-list');
+    if (!list) return;
+    const groups = this._otherEntityGroups || {};
+    const platformNames = { tuya: 'Tuya', tuya_local: 'Tuya (lokaal)', zha: 'Zigbee (ZHA)', zigbee2mqtt: 'Zigbee2MQTT', mqtt: 'MQTT', esphome: 'ESPHome' };
+    const roleOptions = this._otherRoleOptions();
+    const otherRoles = this._state.otherRoles || {};
+    const reverseMap = {};
+    Object.entries(otherRoles).forEach(([k, v]) => { reverseMap[v] = k; });
+    const platforms = Object.keys(groups);
+    if (platforms.length === 0) {
+      list.innerHTML = '<div class="msg info">Geen aanvullende Zigbee/Tuya/MQTT/ESPHome-sensoren gevonden (of alles was al gekoppeld bij een eerdere stap). Dat is geen probleem — deze stap is optioneel.</div>';
+      return;
+    }
+    let html = '';
+    platforms.forEach(p => {
+      html += '<div style="margin:14px 0 6px;font-size:12px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:0.5px">' + (platformNames[p] || p) + '</div>';
+      groups[p].forEach(entityId => {
+        const st = this._hass && this._hass.states[entityId];
+        const friendly = (st && st.attributes && st.attributes.friendly_name) || entityId;
+        const currentRole = reverseMap[entityId] || '';
+        html += '<div class="fr" style="align-items:center;gap:8px">' +
+          '<span class="fk" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + friendly +
+          '<br><span style="font-size:10px;opacity:0.5">' + entityId + '</span></span>' +
+          '<select data-role-entity="' + entityId + '" style="max-width:180px;flex-shrink:0">' +
+          roleOptions.map(([k, lbl]) => '<option value="' + k + '"' + (k === currentRole ? ' selected' : '') + '>' + lbl + '</option>').join('') +
+          '</select>' +
+          '</div>';
+      });
+    });
+    list.innerHTML = html;
+  }
+
+  _renderStep5(c) {
     const foto = this._state.fotoDataUrl;
     c.innerHTML = '<h2>Foto van het schip</h2>' +
       '<p class="sub">Upload een foto — dit wordt de achtergrond van het dashboard. Landschap formaat werkt het best.</p>' +
@@ -4475,8 +4588,8 @@ class FinallyWizard extends HTMLElement {
       '</div>' +
       '<input type="file" id="foto-input" accept="image/*" style="display:none">' +
       '<div class="btn-row">' +
-      '<button class="btn btn-s" data-action="step" data-n="3">‹ Terug</button>' +
-      '<button class="btn btn-p" data-action="step" data-n="5">Voltooien ›</button>' +
+      '<button class="btn btn-s" data-action="step" data-n="4">‹ Terug</button>' +
+      '<button class="btn btn-p" data-action="step" data-n="6">Voltooien ›</button>' +
       '</div>';
   }
 
@@ -4502,11 +4615,15 @@ class FinallyWizard extends HTMLElement {
       ['bms2_entity_prefix', e.bms2Prefix],
       ['watertank_level_entity', e.watertankLevel],
     ];
+    const usedKeys = new Set(map.filter(([, val]) => !!val).map(([key]) => key));
+    Object.entries(this._state.otherRoles || {}).forEach(([key, val]) => {
+      if (val && !usedKeys.has(key)) map.push([key, val]);
+    });
     const lines = map.filter(([, val]) => !!val).map(([key, val]) => key + ': ' + val);
     return lines.join('\n');
   }
 
-  _renderStep5(c) {
+  _renderStep6(c) {
     const s = this._state;
     const status = (val) => val ? 'ok' : 'missing';
     const txt = (val) => val || '— niet geconfigureerd';
@@ -4525,6 +4642,7 @@ class FinallyWizard extends HTMLElement {
       '<div class="fr"><span class="fk">JK BMS 1</span><span class="fv ' + status(s.entities.bms1Prefix) + '">' + txt(s.entities.bms1Prefix) + '</span></div>' +
       '<div class="fr"><span class="fk">JK BMS 2</span><span class="fv ' + status(s.entities.bms2Prefix) + '">' + txt(s.entities.bms2Prefix) + '</span></div>' +
       '<div class="fr"><span class="fk">Watertank</span><span class="fv ' + status(s.entities.watertankLevel) + '">' + txt(s.entities.watertankLevel) + '</span></div>' +
+      '<div class="fr"><span class="fk">Overige sensoren</span><span class="fv ' + (Object.keys(s.otherRoles || {}).length ? 'ok' : 'missing') + '">' + (Object.keys(s.otherRoles || {}).length ? Object.keys(s.otherRoles).length + ' gekoppeld' : '— geen gekoppeld') + '</span></div>' +
       '<div class="fr"><span class="fk">Walstroom</span><span class="fv ' + status(s.serials.shelly) + '">' + txt(s.serials.shelly) + '</span></div>' +
       '<div class="fr"><span class="fk">Foto</span><span class="fv ' + (s.fotoDataUrl ? 'ok' : 'warn') + '">' + (s.fotoDataUrl ? '&#10003; geüpload' : '— geen foto') + '</span></div>' +
       '</div>' +
@@ -4538,7 +4656,7 @@ class FinallyWizard extends HTMLElement {
           '</div>'
         : '') +
       '<div class="btn-row">' +
-      '<button class="btn btn-s" data-action="step" data-n="4">‹ Terug</button>' +
+      '<button class="btn btn-s" data-action="step" data-n="5">‹ Terug</button>' +
       '<button class="btn btn-p" data-action="save">&#128190; Opslaan & toepassen</button>' +
       '</div>';
   }
@@ -4600,6 +4718,15 @@ class FinallyWizard extends HTMLElement {
       };
       reader.readAsDataURL(file);
     }
+    if (e.target.dataset.roleEntity) {
+      const entityId = e.target.dataset.roleEntity;
+      const roleKey = e.target.value;
+      const s = this._state;
+      if (!s.otherRoles) s.otherRoles = {};
+      // Deze entity uit een eventuele eerder toegewezen rol halen, voorkomt dubbele toewijzing
+      Object.keys(s.otherRoles).forEach(k => { if (s.otherRoles[k] === entityId) delete s.otherRoles[k]; });
+      if (roleKey) s.otherRoles[roleKey] = entityId;
+    }
   }
 
   _saveConfig() {
@@ -4609,6 +4736,7 @@ class FinallyWizard extends HTMLElement {
       entities: this._state.entities,
       serials: this._state.serials,
       apparatuur: this._state.apparatuur,
+      otherRoles: this._state.otherRoles,
       savedAt: new Date().toISOString()
     };
     const msg = this.shadowRoot.getElementById('save-msg');
