@@ -1,9 +1,16 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.4.5
+   Versie: 3.4.6
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.4.6 — Extra bij v3.4.5: bestandsnaam van de voorgrond-illustratie
+   (voorheen altijd 'boot.png') is nu ook los configureerbaar via
+   foreground_image, naast de al configureerbare background_folder.
+   Voorkomt verwarring bij thema's zonder boot (bv. camper: 'camper.png'
+   i.p.v. het bestand nog steeds 'boot.png' te moeten noemen). Standaard
+   blijft 'boot.png', dus geen wijziging voor bestaande installaties.
 
    v3.4.5 — Fix op v3.4.4: boot.png (de bootillustratie bovenop de
    weer-achtergrond, kiosk én mobiel) was nog hardcoded naar
@@ -1319,6 +1326,7 @@ class FinallySkyCard extends HTMLElement {
     // Achtergrond (configureerbaar: background_folder laat een alternatieve tegel-set toe, bv. camper-versie
     // met exact dezelfde bestandsnamen als de standaard boot-tegels — zie background_path_voorbeeld)
     const backgroundFolder = (this._config && this._config.background_folder) || '/local/finally-card/';
+    const foregroundImage = (this._config && this._config.foreground_image) || 'boot.png';
     const skyImg  = hass ? finallySkyImagePath(wcond, parseFloat(_sA.elevation ?? 0), new Date().getHours(), backgroundFolder) : backgroundFolder + 'clear-day.png';
 
 
@@ -1433,7 +1441,7 @@ class FinallySkyCard extends HTMLElement {
  <div class="design-canvas" id="design-canvas">
   <img class="bg" src="${skyImg}"/>
   ${(this._config && this._config.bg_darken) ? `<div style="position:absolute;inset:0;z-index:1;background:rgba(0,0,10,${this._config.bg_darken});pointer-events:none"></div>` : ''}
-  <img src="${backgroundFolder}boot.png" style="position:absolute;bottom:18%;left:35%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
+  <img src="${backgroundFolder}${foregroundImage}" style="position:absolute;bottom:18%;left:35%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
 
   <!-- Erik op SUP — alleen bij mooi weer -->
   ${(wcond === 'sunny' || wcond === 'partlycloudy') && sunAbove ? `
@@ -2627,6 +2635,7 @@ class FinallySkyCardMobile extends HTMLElement {
 
     // ── Achtergrond ── (configureerbaar: background_folder, zie toelichting bij FinallySkyCard)
     const backgroundFolderM = (this._config && this._config.background_folder) || '/local/finally-card/';
+    const foregroundImageM = (this._config && this._config.foreground_image) || 'boot.png';
     const skyImg  = finallySkyImagePath(wcond, parseFloat(sunElev), new Date().getHours(), backgroundFolderM);
 
 
@@ -2907,7 +2916,7 @@ class FinallySkyCardMobile extends HTMLElement {
   <!-- ══ HERO ══ -->
   <div class="hero">
     <img class="hero-bg" src="${skyImg}"/>
-    <img src="${backgroundFolderM}boot.png" style="position:absolute;bottom:${(this._config && this._config.hero_boat_bottom) || 20}%;left:50%;transform:translateX(-50%);width:${(this._config && this._config.hero_boat_size_pct) || 62}%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
+    <img src="${backgroundFolderM}${foregroundImageM}" style="position:absolute;bottom:${(this._config && this._config.hero_boat_bottom) || 20}%;left:50%;transform:translateX(-50%);width:${(this._config && this._config.hero_boat_size_pct) || 62}%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <div class="hero-top">
