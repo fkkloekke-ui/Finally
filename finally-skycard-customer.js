@@ -1,9 +1,26 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.5.0
+   Versie: 3.5.1
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.5.1 — Walstroom-overbelastingsbeveiliging instelbaar gemaakt in de
+   kaart zelf (kiosk + mobiel), i.p.v. alleen via de HA-automation-editor.
+   Nieuwe rij "OVERBELASTING" in de bestaande walstroom-instellingen-popup
+   met vier +/- regelaars: aan-drempel (W), uit-drempel (W), aan-duur (s),
+   uit-duur (s). Achterliggende automations op MS Finally herbouwd van een
+   vaste for:-tijd naar een wait_for_trigger-patroon met instelbare timeout
+   (native for: kan niet naar een helper-entity verwijzen, timeout: wel) —
+   voorkomt dat korte lastpieken (bv. een koffiezetapparaat van 32s) al
+   walstroom inschakelen. Nieuwe config-velden (allemaal met sensibele
+   defaults, geen wijziging nodig als de installateur de standaard
+   helper-namen aanhoudt): walstroom_overbelasting_aan_entity,
+   walstroom_overbelasting_uit_entity, walstroom_overbelasting_aan_duur_entity,
+   walstroom_overbelasting_uit_duur_entity. Bij nieuwe klantinstallaties:
+   vier input_number-helpers aanmaken met exact deze namen (net als de
+   bestaande verbruik_gisteren-helper) — geen automatische wizard-detectie,
+   want dit zijn generieke helpers, geen Victron-specifieke serienummers.
 
    v3.5.0 — Nieuwe wizard-stap: "Overige sensoren" (Zigbee/Tuya/MQTT/
    ESPHome). Victron-detectie werkt op vaste namen die de integratie zelf
@@ -1820,6 +1837,46 @@ ${(this._config && this._config.show_wind) ? `
         </div>
       </div>
 
+      <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:20px;margin-bottom:8px">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:16px">OVERBELASTING</div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN BOVEN</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+          <div id="wi-ovl-aan-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-aan-val" style="font-size:32px;font-weight:800;color:#ff4444">-- W</div></div>
+          <div id="wi-ovl-aan-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN NA</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+          <div id="wi-ovl-aanduur-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-aanduur-val" style="font-size:32px;font-weight:800;color:#ff8844">-- s</div></div>
+          <div id="wi-ovl-aanduur-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT ONDER</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+          <div id="wi-ovl-uit-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-uit-val" style="font-size:32px;font-weight:800;color:#00cc66">-- W</div></div>
+          <div id="wi-ovl-uit-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:28px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT NA</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+          <div id="wi-ovl-uitduur-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-uitduur-val" style="font-size:32px;font-weight:800;color:#66ccff">-- s</div></div>
+          <div id="wi-ovl-uitduur-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+        </div>
+      </div>
+
       <div id="wi-sluit" style="cursor:pointer;padding:12px 40px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95);display:inline-block">Sluiten</div>
     </div>
   </div>
@@ -1984,6 +2041,10 @@ ${(this._config && this._config.show_kabola) ? `
     const walstroomSocAanEntity = (this._config && this._config.walstroom_soc_aan_entity) || 'input_number.walstroom_soc_aan';
     const walstroomSocUitEntity = (this._config && this._config.walstroom_soc_uit_entity) || 'input_number.walstroom_soc_uit';
     const walstroomZonDrempelEntity = (this._config && this._config.walstroom_zon_drempel_entity) || 'input_number.walstroom_zon_drempel';
+    const walstroomOvlAanEntity = (this._config && this._config.walstroom_overbelasting_aan_entity) || 'input_number.walstroom_overbelasting_aan';
+    const walstroomOvlUitEntity = (this._config && this._config.walstroom_overbelasting_uit_entity) || 'input_number.walstroom_overbelasting_uit';
+    const walstroomOvlAanDuurEntity = (this._config && this._config.walstroom_overbelasting_aan_duur_entity) || 'input_number.walstroom_overbelasting_aan_duur';
+    const walstroomOvlUitDuurEntity = (this._config && this._config.walstroom_overbelasting_uit_duur_entity) || 'input_number.walstroom_overbelasting_uit_duur';
     // Animatie via CSS keyframes — geen JS nodig
 
 
@@ -2100,13 +2161,26 @@ ${(this._config && this._config.show_kabola) ? `
       const aan = parseFloat(this._hass.states[walstroomSocAanEntity]?.state) || 30;
       const uit = parseFloat(this._hass.states[walstroomSocUitEntity]?.state) || 80;
       const zon = parseFloat(this._hass.states[walstroomZonDrempelEntity]?.state) || 300;
+      const ovlAan = parseFloat(this._hass.states[walstroomOvlAanEntity]?.state) || 4500;
+      const ovlUit = parseFloat(this._hass.states[walstroomOvlUitEntity]?.state) || 3000;
+      const ovlAanDuur = parseFloat(this._hass.states[walstroomOvlAanDuurEntity]?.state) || 30;
+      const ovlUitDuur = parseFloat(this._hass.states[walstroomOvlUitDuurEntity]?.state) || 30;
       wiPopup._socAan = aan; wiPopup._socUit = uit; wiPopup._zon = zon;
+      wiPopup._ovlAan = ovlAan; wiPopup._ovlUit = ovlUit; wiPopup._ovlAanDuur = ovlAanDuur; wiPopup._ovlUitDuur = ovlUitDuur;
       const v1 = wiPopup.querySelector('#wi-soc-aan-val');
       const v2 = wiPopup.querySelector('#wi-soc-uit-val');
       const v3 = wiPopup.querySelector('#wi-zon-val');
+      const v4 = wiPopup.querySelector('#wi-ovl-aan-val');
+      const v5 = wiPopup.querySelector('#wi-ovl-uit-val');
+      const v6 = wiPopup.querySelector('#wi-ovl-aanduur-val');
+      const v7 = wiPopup.querySelector('#wi-ovl-uitduur-val');
       if (v1) v1.textContent = aan + '%';
       if (v2) v2.textContent = uit + '%';
       if (v3) v3.textContent = zon + ' W';
+      if (v4) v4.textContent = ovlAan + ' W';
+      if (v5) v5.textContent = ovlUit + ' W';
+      if (v6) v6.textContent = ovlAanDuur + ' s';
+      if (v7) v7.textContent = ovlUitDuur + ' s';
     };
 
     const _wiSet = (entity, value) => {
@@ -2151,6 +2225,46 @@ ${(this._config && this._config.show_kabola) ? `
         wiPopup._zon = Math.min(1000, (wiPopup._zon || 300) + 50);
         const el = wiPopup.querySelector('#wi-zon-val'); if (el) el.textContent = wiPopup._zon + ' W';
         _wiSet(walstroomZonDrempelEntity, wiPopup._zon);
+      });
+      _btn('wi-ovl-aan-min', () => {
+        wiPopup._ovlAan = Math.max(2000, (wiPopup._ovlAan || 4500) - 100);
+        const el = wiPopup.querySelector('#wi-ovl-aan-val'); if (el) el.textContent = wiPopup._ovlAan + ' W';
+        _wiSet(walstroomOvlAanEntity, wiPopup._ovlAan);
+      });
+      _btn('wi-ovl-aan-plus', () => {
+        wiPopup._ovlAan = Math.min(5000, (wiPopup._ovlAan || 4500) + 100);
+        const el = wiPopup.querySelector('#wi-ovl-aan-val'); if (el) el.textContent = wiPopup._ovlAan + ' W';
+        _wiSet(walstroomOvlAanEntity, wiPopup._ovlAan);
+      });
+      _btn('wi-ovl-uit-min', () => {
+        wiPopup._ovlUit = Math.max(1000, (wiPopup._ovlUit || 3000) - 100);
+        const el = wiPopup.querySelector('#wi-ovl-uit-val'); if (el) el.textContent = wiPopup._ovlUit + ' W';
+        _wiSet(walstroomOvlUitEntity, wiPopup._ovlUit);
+      });
+      _btn('wi-ovl-uit-plus', () => {
+        wiPopup._ovlUit = Math.min(4500, (wiPopup._ovlUit || 3000) + 100);
+        const el = wiPopup.querySelector('#wi-ovl-uit-val'); if (el) el.textContent = wiPopup._ovlUit + ' W';
+        _wiSet(walstroomOvlUitEntity, wiPopup._ovlUit);
+      });
+      _btn('wi-ovl-aanduur-min', () => {
+        wiPopup._ovlAanDuur = Math.max(5, (wiPopup._ovlAanDuur || 30) - 5);
+        const el = wiPopup.querySelector('#wi-ovl-aanduur-val'); if (el) el.textContent = wiPopup._ovlAanDuur + ' s';
+        _wiSet(walstroomOvlAanDuurEntity, wiPopup._ovlAanDuur);
+      });
+      _btn('wi-ovl-aanduur-plus', () => {
+        wiPopup._ovlAanDuur = Math.min(300, (wiPopup._ovlAanDuur || 30) + 5);
+        const el = wiPopup.querySelector('#wi-ovl-aanduur-val'); if (el) el.textContent = wiPopup._ovlAanDuur + ' s';
+        _wiSet(walstroomOvlAanDuurEntity, wiPopup._ovlAanDuur);
+      });
+      _btn('wi-ovl-uitduur-min', () => {
+        wiPopup._ovlUitDuur = Math.max(5, (wiPopup._ovlUitDuur || 30) - 5);
+        const el = wiPopup.querySelector('#wi-ovl-uitduur-val'); if (el) el.textContent = wiPopup._ovlUitDuur + ' s';
+        _wiSet(walstroomOvlUitDuurEntity, wiPopup._ovlUitDuur);
+      });
+      _btn('wi-ovl-uitduur-plus', () => {
+        wiPopup._ovlUitDuur = Math.min(300, (wiPopup._ovlUitDuur || 30) + 5);
+        const el = wiPopup.querySelector('#wi-ovl-uitduur-val'); if (el) el.textContent = wiPopup._ovlUitDuur + ' s';
+        _wiSet(walstroomOvlUitDuurEntity, wiPopup._ovlUitDuur);
       });
 
       if (wiSluit) wiSluit.onclick = (e) => { e.stopPropagation(); this._walInstPopupOpen = false; wiPopup.style.display = 'none'; };
@@ -2426,6 +2540,10 @@ class FinallySkyCardMobile extends HTMLElement {
     const walstroomSocAanEntity = (this._config && this._config.walstroom_soc_aan_entity) || 'input_number.walstroom_soc_aan';
     const walstroomSocUitEntity = (this._config && this._config.walstroom_soc_uit_entity) || 'input_number.walstroom_soc_uit';
     const walstroomZonDrempelEntity = (this._config && this._config.walstroom_zon_drempel_entity) || 'input_number.walstroom_zon_drempel';
+    const walstroomOvlAanEntity = (this._config && this._config.walstroom_overbelasting_aan_entity) || 'input_number.walstroom_overbelasting_aan';
+    const walstroomOvlUitEntity = (this._config && this._config.walstroom_overbelasting_uit_entity) || 'input_number.walstroom_overbelasting_uit';
+    const walstroomOvlAanDuurEntity = (this._config && this._config.walstroom_overbelasting_aan_duur_entity) || 'input_number.walstroom_overbelasting_aan_duur';
+    const walstroomOvlUitDuurEntity = (this._config && this._config.walstroom_overbelasting_uit_duur_entity) || 'input_number.walstroom_overbelasting_uit_duur';
     if (!this.shadowRoot) return;
     const hass = this._hass;
     if (!hass) {
@@ -3404,6 +3522,46 @@ ${(this._config && this._config.show_generator) ? `
         </div>
       </div>
 
+      <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:18px;margin-bottom:8px">
+        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:14px">OVERBELASTING</div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN BOVEN</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px">
+          <div id="m-wi-ovl-aan-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
+          <div id="m-wi-ovl-aan-val" style="font-size:32px;font-weight:800;color:#ff4444;min-width:70px">-- W</div>
+          <div id="m-wi-ovl-aan-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN NA</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px">
+          <div id="m-wi-ovl-aanduur-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
+          <div id="m-wi-ovl-aanduur-val" style="font-size:32px;font-weight:800;color:#ff8844;min-width:70px">-- s</div>
+          <div id="m-wi-ovl-aanduur-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT ONDER</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px">
+          <div id="m-wi-ovl-uit-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
+          <div id="m-wi-ovl-uit-val" style="font-size:32px;font-weight:800;color:#00cc66;min-width:70px">-- W</div>
+          <div id="m-wi-ovl-uit-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT NA</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px">
+          <div id="m-wi-ovl-uitduur-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
+          <div id="m-wi-ovl-uitduur-val" style="font-size:32px;font-weight:800;color:#66ccff;min-width:70px">-- s</div>
+          <div id="m-wi-ovl-uitduur-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+        </div>
+      </div>
+
       <div id="m-wi-sluit" style="cursor:pointer;padding:12px 40px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95);display:inline-block">Sluiten</div>
     </div>
   </div>
@@ -3726,13 +3884,26 @@ ${(this._config && this._config.show_generator) ? `
       const aan = parseFloat(this._hass.states[walstroomSocAanEntity]?.state) || 30;
       const uit = parseFloat(this._hass.states[walstroomSocUitEntity]?.state) || 80;
       const zon = parseFloat(this._hass.states[walstroomZonDrempelEntity]?.state) || 300;
+      const ovlAan = parseFloat(this._hass.states[walstroomOvlAanEntity]?.state) || 4500;
+      const ovlUit = parseFloat(this._hass.states[walstroomOvlUitEntity]?.state) || 3000;
+      const ovlAanDuur = parseFloat(this._hass.states[walstroomOvlAanDuurEntity]?.state) || 30;
+      const ovlUitDuur = parseFloat(this._hass.states[walstroomOvlUitDuurEntity]?.state) || 30;
       mWiPopup._socAan = aan; mWiPopup._socUit = uit; mWiPopup._zon = zon;
+      mWiPopup._ovlAan = ovlAan; mWiPopup._ovlUit = ovlUit; mWiPopup._ovlAanDuur = ovlAanDuur; mWiPopup._ovlUitDuur = ovlUitDuur;
       const v1 = mWiPopup.querySelector('#m-wi-soc-aan-val');
       const v2 = mWiPopup.querySelector('#m-wi-soc-uit-val');
       const v3 = mWiPopup.querySelector('#m-wi-zon-val');
+      const v4 = mWiPopup.querySelector('#m-wi-ovl-aan-val');
+      const v5 = mWiPopup.querySelector('#m-wi-ovl-uit-val');
+      const v6 = mWiPopup.querySelector('#m-wi-ovl-aanduur-val');
+      const v7 = mWiPopup.querySelector('#m-wi-ovl-uitduur-val');
       if (v1) v1.textContent = aan + '%';
       if (v2) v2.textContent = uit + '%';
       if (v3) v3.textContent = zon + ' W';
+      if (v4) v4.textContent = ovlAan + ' W';
+      if (v5) v5.textContent = ovlUit + ' W';
+      if (v6) v6.textContent = ovlAanDuur + ' s';
+      if (v7) v7.textContent = ovlUitDuur + ' s';
     };
     const _mWiSet = (entity, value) => {
       this._hass.callService('input_number', 'set_value', { entity_id: entity, value });
@@ -3751,6 +3922,14 @@ ${(this._config && this._config.show_generator) ? `
       _mWiBtn('m-wi-soc-uit-plus', () => { mWiPopup._socUit = Math.min(100, (mWiPopup._socUit||80)+5); const el=mWiPopup.querySelector('#m-wi-soc-uit-val'); if(el) el.textContent=mWiPopup._socUit+'%'; _mWiSet(walstroomSocUitEntity, mWiPopup._socUit); });
       _mWiBtn('m-wi-zon-min', () => { mWiPopup._zon = Math.max(0, (mWiPopup._zon||300)-50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet(walstroomZonDrempelEntity, mWiPopup._zon); });
       _mWiBtn('m-wi-zon-plus', () => { mWiPopup._zon = Math.min(1000, (mWiPopup._zon||300)+50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet(walstroomZonDrempelEntity, mWiPopup._zon); });
+      _mWiBtn('m-wi-ovl-aan-min', () => { mWiPopup._ovlAan = Math.max(2000, (mWiPopup._ovlAan||4500)-100); const el=mWiPopup.querySelector('#m-wi-ovl-aan-val'); if(el) el.textContent=mWiPopup._ovlAan+' W'; _mWiSet(walstroomOvlAanEntity, mWiPopup._ovlAan); });
+      _mWiBtn('m-wi-ovl-aan-plus', () => { mWiPopup._ovlAan = Math.min(5000, (mWiPopup._ovlAan||4500)+100); const el=mWiPopup.querySelector('#m-wi-ovl-aan-val'); if(el) el.textContent=mWiPopup._ovlAan+' W'; _mWiSet(walstroomOvlAanEntity, mWiPopup._ovlAan); });
+      _mWiBtn('m-wi-ovl-uit-min', () => { mWiPopup._ovlUit = Math.max(1000, (mWiPopup._ovlUit||3000)-100); const el=mWiPopup.querySelector('#m-wi-ovl-uit-val'); if(el) el.textContent=mWiPopup._ovlUit+' W'; _mWiSet(walstroomOvlUitEntity, mWiPopup._ovlUit); });
+      _mWiBtn('m-wi-ovl-uit-plus', () => { mWiPopup._ovlUit = Math.min(4500, (mWiPopup._ovlUit||3000)+100); const el=mWiPopup.querySelector('#m-wi-ovl-uit-val'); if(el) el.textContent=mWiPopup._ovlUit+' W'; _mWiSet(walstroomOvlUitEntity, mWiPopup._ovlUit); });
+      _mWiBtn('m-wi-ovl-aanduur-min', () => { mWiPopup._ovlAanDuur = Math.max(5, (mWiPopup._ovlAanDuur||30)-5); const el=mWiPopup.querySelector('#m-wi-ovl-aanduur-val'); if(el) el.textContent=mWiPopup._ovlAanDuur+' s'; _mWiSet(walstroomOvlAanDuurEntity, mWiPopup._ovlAanDuur); });
+      _mWiBtn('m-wi-ovl-aanduur-plus', () => { mWiPopup._ovlAanDuur = Math.min(300, (mWiPopup._ovlAanDuur||30)+5); const el=mWiPopup.querySelector('#m-wi-ovl-aanduur-val'); if(el) el.textContent=mWiPopup._ovlAanDuur+' s'; _mWiSet(walstroomOvlAanDuurEntity, mWiPopup._ovlAanDuur); });
+      _mWiBtn('m-wi-ovl-uitduur-min', () => { mWiPopup._ovlUitDuur = Math.max(5, (mWiPopup._ovlUitDuur||30)-5); const el=mWiPopup.querySelector('#m-wi-ovl-uitduur-val'); if(el) el.textContent=mWiPopup._ovlUitDuur+' s'; _mWiSet(walstroomOvlUitDuurEntity, mWiPopup._ovlUitDuur); });
+      _mWiBtn('m-wi-ovl-uitduur-plus', () => { mWiPopup._ovlUitDuur = Math.min(300, (mWiPopup._ovlUitDuur||30)+5); const el=mWiPopup.querySelector('#m-wi-ovl-uitduur-val'); if(el) el.textContent=mWiPopup._ovlUitDuur+' s'; _mWiSet(walstroomOvlUitDuurEntity, mWiPopup._ovlUitDuur); });
       if (mWiSluit) mWiSluit.onclick = (e) => { e.stopPropagation(); this._walInstPopupOpen = false; mWiPopup.style.display = 'none'; };
       mWiPopup.onclick = (e) => { if (e.target === mWiPopup) { this._walInstPopupOpen = false; mWiPopup.style.display = 'none'; } };
     }
