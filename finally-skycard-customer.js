@@ -1,9 +1,16 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.5.1
+   Versie: 3.5.2
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.5.2 — Fix op v3.5.1: de walstroom-instellingen-popup (kiosk + mobiel)
+   kreeg door de nieuwe OVERBELASTING-sectie een vaste hoogte die op
+   kleinere/mobiele schermen buiten beeld viel, zonder scroll-mogelijkheid
+   — het onderste deel (uit-drempel/duur, sluitknop) was dan onbereikbaar.
+   Popup-container heeft nu max-height + overflow-y:auto (met
+   -webkit-overflow-scrolling:touch voor soepel scrollen op iOS/Android).
 
    v3.5.1 — Walstroom-overbelastingsbeveiliging instelbaar gemaakt in de
    kaart zelf (kiosk + mobiel), i.p.v. alleen via de HA-automation-editor.
@@ -1807,7 +1814,7 @@ ${(this._config && this._config.show_wind) ? `
 
   <!-- WALSTROOM INSTELLINGEN POPUP -->
   <div id="wal-inst-popup" style="display:none;position:fixed;inset:0;z-index:102;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
-    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(100,170,255,0.35);border-radius:20px;padding:32px 40px;min-width:360px;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(100,170,255,0.35);border-radius:20px;padding:32px 40px;min-width:360px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
       <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">WALSTROOM INSTELLINGEN</div>
 
       <div style="margin-bottom:20px">
@@ -3492,7 +3499,7 @@ ${(this._config && this._config.show_generator) ? `
 
   <!-- WALSTROOM INSTELLINGEN POPUP -->
   <div id="m-wal-inst-popup" style="display:none;position:fixed;inset:0;z-index:102;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
-    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(100,170,255,0.35);border-radius:20px;padding:28px;width:min(340px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(100,170,255,0.35);border-radius:20px;padding:28px;width:min(340px,88vw);max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
       <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">WALSTROOM INSTELLINGEN</div>
 
       <div style="margin-bottom:18px">
