@@ -520,7 +520,7 @@ class FinallySkyCard extends HTMLElement {
   _buildPopupHTML(id) {
     const titles = {
       energie: '⚡ ENERGIE — REAL-TIME', solar: '☀️ ZONNEPANELEN',
-      accu: `🔋 ACCUBANK — ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`, generator: '⚙️ GENERATOR',
+      accu: `🔋 ACCUBANK${(this._config && this._config.hide_battery_label) ? '' : ` — ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`}`, generator: '⚙️ GENERATOR',
       klimaat: '🌡️ KLIMAAT AAN BOORD', verlichting: '💡 VERLICHTING', systeem: '🖥️ SYSTEEM'
     };
     const h = (s) => `<div class="sb-title"><span>${titles[id]||id}</span><span class="sb-close">✕</span></div>` + s;
@@ -3090,7 +3090,7 @@ class FinallySkyCardMobile extends HTMLElement {
       </div>
       <div class="hero-bottom">
         <div class="hero-soc">
-          <div class="soc-lbl">TOTAAL SOC · ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}</div>
+          <div class="soc-lbl">TOTAAL SOC${(this._config && this._config.hide_battery_label) ? '' : ` · ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`}</div>
           <div class="soc-getal" style="color:${socColor}">${Math.round(battSoc)}%</div>
           <div class="soc-bar">
             <div class="soc-bar-fill" style="width:${battSoc}%;background:${socColor}"></div>
