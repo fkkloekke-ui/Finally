@@ -3070,7 +3070,9 @@ class FinallySkyCardMobile extends HTMLElement {
   <!-- ══ HERO ══ -->
   <div class="hero">
     <img class="hero-bg" src="${skyImg}"/>
+    ${(this._config && this._config.boat_below_hero) ? '' : `
     <img src="${backgroundFolderM}${foregroundImageM}" style="position:absolute;bottom:${(this._config && this._config.hero_boat_bottom) || 20}%;left:50%;transform:translateX(-50%);width:${(this._config && this._config.hero_boat_size_pct) || 62}%;height:auto;pointer-events:none;z-index:1;opacity:0.95"/>
+    `}
     <div class="hero-overlay"></div>
     <div class="hero-content">
       <div class="hero-top">
@@ -3102,6 +3104,13 @@ class FinallySkyCardMobile extends HTMLElement {
       </div>
     </div>
   </div>
+
+  <!-- ══ BOOT AFBEELDING — optioneel los van hero (boat_below_hero:true), voor staande-formaat afbeeldingen die anders afgeknipt worden ══ -->
+${(this._config && this._config.boat_below_hero) ? `
+  <div style="text-align:center;margin:14px 0">
+    <img src="${backgroundFolderM}${foregroundImageM}" style="width:${(this._config && this._config.mobile_boat_size_pct) || 70}%;height:auto;opacity:0.95"/>
+  </div>
+` : ''}
 
   <!-- ══ ENERGIE FLOW ══ -->
   <div class="section">
