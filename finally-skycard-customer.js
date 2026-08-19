@@ -1671,6 +1671,14 @@ class FinallySkyCard extends HTMLElement {
     <div style="font-size:15px;font-weight:700;color:rgba(255,210,100,0.9);display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,210,100,0.9)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 16v-4" stroke-width="2"/><path d="M9 13l3-3 3 3" stroke-width="2"/></svg>${zonOp}</div>
   </div>
 
+${(this._config && this._config.zononder_left !== undefined && this._config.zononder_top !== undefined) ? `
+  <!-- ZON ONDER losse tegel — vrij te positioneren, i.p.v. in de accu-kolom -->
+  <div class="zonlbl" style="left:${this._config.zononder_left}px;top:${this._config.zononder_top}px">
+    <div style="font-size:10px;color:rgba(255,180,90,0.85);letter-spacing:1px">ZON ONDER</div>
+    <div style="font-size:15px;font-weight:700;color:#ffb050;display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb050" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 12v4" stroke-width="2"/><path d="M9 15l3 3 3-3" stroke-width="2"/></svg>${zonOnd}</div>
+  </div>
+` : ''}
+
 
 
   <!-- LOAD badge zit nu in de flows SVG -->
@@ -1770,11 +1778,13 @@ ${(this._config && this._config.show_wind) ? `
     </div>
 ` : ''}
 
+${(this._config && this._config.hide_zon_onder) ? '' : `
     <!-- ZON ONDER tegel — nu onderaan, volle breedte -->
     <div class="batt-detail" style="width:100%;background:rgba(4,14,44,0.55);text-align:center;padding:10px 12px;display:flex;flex-direction:column;justify-content:center;align-items:center">
       <div style="font-size:10px;color:rgba(255,180,90,0.85);letter-spacing:1px">ZON ONDER</div>
       <div style="font-size:15px;font-weight:700;color:#ffb050;display:flex;align-items:center;gap:5px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ffb050" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/><path d="M5 19h14" stroke-width="1.5"/><path d="M12 12v4" stroke-width="2"/><path d="M9 15l3 3 3-3" stroke-width="2"/></svg>${zonOnd}</div>
     </div>
+`}
   </div>
 
 
@@ -2030,8 +2040,10 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
 
     // Start flow animatie
     this._startFlowAnim();
-    // Start regen animatie
-    this._startRainAnim(wcond);
+    // Start regen animatie (uit te zetten via disable_rain_animation, scheelt onnodig herrenderen op kiosk-schermen)
+    if (!(this._config && this._config.disable_rain_animation)) {
+      this._startRainAnim(wcond);
+    }
 
     // Herattach overlay container als die bestaat (overleeft geen innerHTML reset)
     if (this._overlayContainer) {
