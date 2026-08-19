@@ -1949,14 +1949,14 @@ ${(this._config && this._config.hide_zon_onder) ? '' : `
       <!-- STATS BALK onderaan -->
   <div class="statsbar">
 
-    <div class="stat" style="border-color:rgba(255,200,0,0.2)">
+    <div class="stat" style="flex:${(this._config && this._config.pv_flex) || 1};border-color:rgba(255,200,0,0.2)">
       <div class="sl">PV VANDAAG</div>
       <div class="sv" style="color:#ffd700">${pvVandaag} kWh</div>
       <div class="ss">Maand: ${pvMaand} kWh</div>
       <div class="ss">${mpptState}</div>
     </div>
 
-    <div class="stat" style="max-width:140px;border-color:rgba(0,200,255,0.2)">
+    <div class="stat" style="max-width:${(this._config && this._config.resterende_width) || 140}px;border-color:rgba(0,200,255,0.2)">
       <div class="sl">RESTERENDE TIJD</div>
       <div class="sv" style="color:#00d7ff">${battDuur} uur te gaan</div>
       <div class="ss">${battWh} Wh</div>
