@@ -1629,7 +1629,7 @@ class FinallySkyCard extends HTMLElement {
   </div>
 
   <!-- GRID label linksboven bij mast -->
-  <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top left;` : ''}">
+  <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top left;` : ''}${(this._config && this._config.walstroom_right !== undefined) ? `right:${this._config.walstroom_right}px;left:auto;` : ''}${(this._config && this._config.walstroom_top !== undefined) ? `top:${this._config.walstroom_top}px;` : ''}">
     <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'};${(this._config && this._config.walstroom_width) ? `min-width:${this._config.walstroom_width}px;` : ''}">
       <div class="lbl" style="letter-spacing:2px;font-size:13px">WALSTROOM</div>
       <div style="font-size:22px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
