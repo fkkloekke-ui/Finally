@@ -424,7 +424,7 @@ class FinallySkyCard extends HTMLElement {
       }
       return;
     }
-    if (now - this._lastUpdate > 1000) {
+    if (now - this._lastUpdate > ((this._config && this._config.render_throttle_ms) || 1000)) {
       this._lastUpdate = now;
       this._render();
     }
