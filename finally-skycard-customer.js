@@ -817,10 +817,10 @@ class FinallySkyCard extends HTMLElement {
       T('ep-acv',acV+' V'); T('ep-ach',acH+' Hz'); T('ep-state',_st('sensor.gx_device_system_state')); T('ep-state-sub',dcV+' V DC');
       T('ep-pvd',_s(pvVandaagEntity).toFixed(2)+' kWh');
       T('ep-pvg',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
-      T('ep-pvm',_s(pvMaandEntity).toFixed(1)+' kWh');
-      T('ep-gd',_s(walstroomDagverbruikEntity).toFixed(2)+' kWh');
-      T('ep-ld',_s(loadDagEntity).toFixed(2)+' kWh');
-      T('ep-lm',_s(loadAanBoordMaandEntity).toFixed(1)+' kWh');
+      T('ep-pvm', this._hasEntity(pvMaandEntity) ? _s(pvMaandEntity).toFixed(1)+' kWh' : '--');
+      T('ep-gd', this._hasEntity(walstroomDagverbruikEntity) ? _s(walstroomDagverbruikEntity).toFixed(2)+' kWh' : '--');
+      T('ep-ld', this._hasEntity(loadDagEntity) ? _s(loadDagEntity).toFixed(2)+' kWh' : '--');
+      T('ep-lm', this._hasEntity(loadAanBoordMaandEntity) ? _s(loadAanBoordMaandEntity).toFixed(1)+' kWh' : '--');
       T('ep-dcv',dcV+' V'); T('ep-dcw',dcW+' W');
       // Kosten & rendement
       const pvM2  = _s(pvMaandEntity);
@@ -829,9 +829,9 @@ class FinallySkyCard extends HTMLElement {
       const inTot = pvM2 + walM;
       const rend  = inTot > 0 ? ((uitM / inTot) * 100).toFixed(1) + ' %' : '-- %';
       const dagNr = new Date().getDate();
-      const gemDag = dagNr > 0 ? (uitM / dagNr).toFixed(2) + ' kWh' : '--';
-      T('ep-pvkost', '€ ' + (pvM2 * 0.50).toFixed(2));
-      T('ep-gkost',  '€ ' + (walM * 0.50).toFixed(2));
+      const gemDag = (dagNr > 0 && this._hasEntity(loadAanBoordMaandEntity)) ? (uitM / dagNr).toFixed(2) + ' kWh' : '--';
+      T('ep-pvkost', this._hasEntity(pvMaandEntity) ? '€ ' + (pvM2 * 0.50).toFixed(2) : '--');
+      T('ep-gkost',  this._hasEntity(walstroomVerbruikMaandEntity) ? '€ ' + (walM * 0.50).toFixed(2) : '--');
       T('ep-rend',   rend);
       T('ep-gemdag', gemDag);
       // Generator dieselkosten
@@ -1090,6 +1090,7 @@ class FinallySkyCard extends HTMLElement {
     </div>`;
   }
   _s(e) { try { return parseFloat(this._hass.states[e]?.state) || 0; } catch(x) { return 0; } }
+  _hasEntity(e) { return !!(this._hass && this._hass.states && this._hass.states[e]); }
   _st(e) { try { return this._hass.states[e]?.state || '--'; } catch(x) { return '--'; } }
   _attr(e, a) { try { return this._hass.states[e]?.attributes[a] ?? null; } catch(x) { return null; } }
   _zt(e) {
@@ -3318,6 +3319,7 @@ ${(this._config && this._config.show_kabola) ? `
     </div>
     <div class="card" style="margin-bottom:8px">
       <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windDisplay} ${windUnitLbl} · ${windDir} · ${windBft} Bft</span></div>
+      ${(this._config && this._config.hide_waterhoogte) ? '' : `
       <div class="row">
         <span class="row-lbl">Waterstand Hasselt</span>
         <div style="display:flex;align-items:center;gap:8px">
@@ -3325,6 +3327,7 @@ ${(this._config && this._config.show_kabola) ? `
           <svg viewBox="0 0 120 36" style="width:80px;height:24px">${sparkSvg}</svg>
         </div>
       </div>
+      `}
       ${(this._config && this._config.hide_watertank) ? '' : `
       <div class="row">
         <span class="row-lbl">Watertank</span>
