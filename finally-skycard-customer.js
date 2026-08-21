@@ -914,8 +914,8 @@ class FinallySkyCard extends HTMLElement {
       });
     }
     else if (id === 'klimaat') {
-      T('kp-tin',_s(indoorTempEntity).toFixed(1)+'°C');
-      T('kp-hum',_s(indoorHumidityEntity).toFixed(0)+'%');
+      T('kp-tin', this._hasEntity(indoorTempEntity) ? _s(indoorTempEntity).toFixed(1)+'°C' : '--');
+      T('kp-hum', this._hasEntity(indoorHumidityEntity) ? _s(indoorHumidityEntity).toFixed(0)+'%' : '--');
       T('kp-wdir',_st(windDirectionEntity));
     }
     else if (id === 'systeem') {
@@ -1266,8 +1266,8 @@ class FinallySkyCard extends HTMLElement {
     const kabolaHuidigeTemp = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
 
     // ── Omgeving ──
-    const tempBinnen = hass ? s(indoorTempEntity).toFixed(1) : '--';
-    const vocht      = hass ? s(indoorHumidityEntity).toFixed(0) : '--';
+    const tempBinnen = (hass && this._hasEntity(indoorTempEntity)) ? s(indoorTempEntity).toFixed(1) : '--';
+    const vocht      = (hass && this._hasEntity(indoorHumidityEntity)) ? s(indoorHumidityEntity).toFixed(0) : '--';
     const _wAttr     = hass ? hass.states[weatherEntity]?.attributes : null;
     const vochtBuiten = _wAttr ? (_wAttr.humidity ?? '--') : '--';
     const windKm     = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
@@ -2516,6 +2516,7 @@ class FinallySkyCardMobile extends HTMLElement {
   }
 
   _s(e) { try { return parseFloat(this._hass.states[e]?.state) || 0; } catch(x) { return 0; } }
+  _hasEntity(e) { return !!(this._hass && this._hass.states && this._hass.states[e]); }
   _st(e) { try { return this._hass.states[e]?.state || '--'; } catch(x) { return '--'; } }
   _attr(e, a) { try { return this._hass.states[e]?.attributes[a] ?? '--'; } catch(x) { return '--'; } }
   _zt(e) {
@@ -2701,7 +2702,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const _windBearM = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const _windDirsM = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
     const windDirM   = _wAttr ? _windDirsM[Math.round(_windBearM / 22.5) % 16] : '--';
-    const vocht      = s(indoorHumidityEntity).toFixed(0);
+    const vocht      = this._hasEntity(indoorHumidityEntity) ? s(indoorHumidityEntity).toFixed(0) : '--';
     const windKm     = windKmM;
     const windDir    = windDirM;
     const windUnitMs = (this._config && this._config.wind_unit === 'ms');
@@ -3294,15 +3295,17 @@ ${(this._config && this._config.show_kabola) ? `
     <div class="section-title">Weer & omgeving</div>
 
     <div class="card-grid-3">
-      ${showIndoorClimate ? `
+      ${(showIndoorClimate && !(this._config && this._config.outdoor_climate)) ? `
       <div class="mini-card">
         <div class="lbl">Temp</div>
         <div class="val-lg" style="color:#ff8844">${tempBinnen}°C</div>
         <div class="sub">aan boord</div>
       </div>
+      ` : ''}
+      ${showIndoorClimate ? `
       <div class="mini-card">
         <div class="lbl">Vochtigheid</div>
-        <div class="val-lg" style="color:#00ccff">${vocht}%</div>
+        <div class="val-lg" style="color:#00ccff">${(this._config && this._config.outdoor_climate) ? vochtBuiten : vocht}%</div>
       </div>
       ` : ''}
       <div class="mini-card">
