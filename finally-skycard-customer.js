@@ -1198,7 +1198,13 @@ class FinallySkyCard extends HTMLElement {
     const _battPowR  = hass ? s('sensor.gx_device_dc_battery_power') : 0;
     const _discharge = Math.abs(_battPowR);
     let battWh, battDuur;
-    if (hass && battCapacityWh && battMinSocPct != null) {
+    const timeToGoEntity = (this._config && this._config.time_to_go_entity) || null;
+    if (timeToGoEntity && hass && this._hasEntity(timeToGoEntity)) {
+      battDuur = (s(timeToGoEntity) / 3600).toFixed(1);
+      battWh = (hass && battCapacityWh && battMinSocPct != null)
+        ? Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100).toFixed(0)
+        : (hass ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--');
+    } else if (hass && battCapacityWh && battMinSocPct != null) {
       const _usableWh = Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100);
       battWh = _usableWh.toFixed(0);
       battDuur = _battPowR < -20 ? (_usableWh / _discharge).toFixed(1) : '--';
@@ -1761,12 +1767,14 @@ ${(this._config && this._config.show_battery_voltage) ? `
     </div>
 ` : ''}
 
-    <!-- Details tegel: spanning/stroom/beschikbaar/autonomie -->
+    <!-- Details tegel: spanning/stroom/(beschikbaar/autonomie optioneel) -->
     <div class="batt-detail" style="width:100%;display:flex;flex-direction:column;gap:4px;padding:9px 14px">
-      <div class="sr" style="gap:10px"><span class="sk">Spanning</span><span class="sv2">${battV} V</span></div>
-      <div class="sr" style="gap:10px"><span class="sk">Stroom</span><span class="sv2" style="color:${battChar?'#00ff88':'#ff9900'}">${battChar?'▲':'▼'} ${Math.abs(parseFloat(battA))} A</span></div>
+      <div class="sr" style="gap:10px"><span class="sk" style="${(this._config && this._config.hide_autonomie) ? 'font-size:17px' : ''}">Spanning</span><span class="sv2" style="${(this._config && this._config.hide_autonomie) ? 'font-size:17px' : ''}">${battV} V</span></div>
+      <div class="sr" style="gap:10px"><span class="sk" style="${(this._config && this._config.hide_autonomie) ? 'font-size:17px' : ''}">Stroom</span><span class="sv2" style="color:${battChar?'#00ff88':'#ff9900'};${(this._config && this._config.hide_autonomie) ? 'font-size:17px' : ''}">${battChar?'▲':'▼'} ${Math.abs(parseFloat(battA))} A</span></div>
+      ${(this._config && this._config.hide_autonomie) ? '' : `
       <div class="sr" style="gap:10px"><span class="sk">Beschikbaar</span><span class="sv2" style="color:#88ccff">${battWh} Wh</span></div>
       <div class="sr" style="gap:10px"><span class="sk">Autonomie</span><span class="sv2" style="color:#aaffcc">${battDuur} uur te gaan</span></div>
+      `}
     </div>
 
 ${(this._config && this._config.show_wind) ? `
@@ -2614,7 +2622,13 @@ class FinallySkyCardMobile extends HTMLElement {
     const battMinSocPct = this._config && this._config.battery_min_soc_pct;
     const _battPowM  = s('sensor.gx_device_dc_battery_power');
     let battWh, battDuur;
-    if (battCapacityWh && battMinSocPct != null) {
+    const timeToGoEntity = (this._config && this._config.time_to_go_entity) || null;
+    if (timeToGoEntity && this._hasEntity(timeToGoEntity)) {
+      battDuur = (s(timeToGoEntity) / 3600).toFixed(1);
+      battWh = (battCapacityWh && battMinSocPct != null)
+        ? Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100).toFixed(0)
+        : s('sensor.accu_beschikbaar_wh').toFixed(0);
+    } else if (battCapacityWh && battMinSocPct != null) {
       const _usableWhM = Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100);
       battWh = _usableWhM.toFixed(0);
       battDuur = _battPowM < -20 ? (_usableWhM / Math.abs(_battPowM)).toFixed(1) : '--';
