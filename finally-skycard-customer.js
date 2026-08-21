@@ -1360,8 +1360,9 @@ class FinallySkyCard extends HTMLElement {
 
     // pvCurve al berekend in zon sectie hierboven
     // battCurve al berekend in zon sectie hierboven
-    // Grid: rechte lijn van links naar boot
-    const gridX1 = 390, gridY1 = 694;
+    // Grid: rechte lijn van walstroom-tegel naar boot (positie instelbaar i.v.m. verplaatste OFF-GRID-tegel)
+    const gridX1 = (this._config && this._config.grid_line_x) || 390;
+    const gridY1 = (this._config && this._config.grid_line_y) || 694;
 
     // Achtergrond (configureerbaar: background_folder laat een alternatieve tegel-set toe, bv. camper-versie
     // met exact dezelfde bestandsnamen als de standaard boot-tegels — zie background_path_voorbeeld)
