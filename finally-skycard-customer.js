@@ -2712,6 +2712,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const wcond      = hass ? st(weatherEntity) : '--';
     const tempBuiten = hass ? (hass.states[weatherEntity]?.attributes?.temperature ?? '--') : '--';
     const _wAttr     = hass ? hass.states[weatherEntity]?.attributes : null;
+    const vochtBuiten = _wAttr ? (_wAttr.humidity ?? '--') : '--';
     const windKmM    = _wAttr ? parseFloat(_wAttr.wind_speed ?? 0).toFixed(1) : '--';
     const _windBearM = _wAttr ? parseFloat(_wAttr.wind_bearing ?? 0) : 0;
     const _windDirsM = ['N','NNO','NO','ONO','O','OZO','ZO','ZZO','Z','ZZW','ZW','WZW','W','WNW','NW','NNW'];
