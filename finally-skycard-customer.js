@@ -410,6 +410,9 @@ class FinallySkyCard extends HTMLElement {
     showEl.innerHTML = html; // buiten beeld opbouwen
     showEl.style.visibility = 'visible';
     hideEl.style.visibility = 'hidden';
+    hideEl.innerHTML = ''; // meteen leegmaken: voorkomt dubbele elementen met hetzelfde ID
+                            // (anders pakt getElementById soms de verkeerde/verborgen kopie,
+                            // bijv. bij _applyScale() -> canvas "vliegt" heen en weer)
     this._activeBuf = this._activeBuf === 'a' ? 'b' : 'a';
   }
 
