@@ -1232,11 +1232,19 @@ class FinallySkyCard extends HTMLElement {
     const _discharge = Math.abs(_battPowR);
     let battWh, battDuur;
     const timeToGoEntity = (this._config && this._config.time_to_go_entity) || null;
-    if (timeToGoEntity && hass && this._hasEntity(timeToGoEntity)) {
-      battDuur = (s(timeToGoEntity) / 3600).toFixed(1);
+    const _ttgRaw = timeToGoEntity && hass ? parseFloat(hass.states[timeToGoEntity]?.state) : NaN;
+    if (timeToGoEntity && hass && Number.isFinite(_ttgRaw)) {
+      battDuur = (_ttgRaw / 3600).toFixed(1);
       battWh = (hass && battCapacityWh && battMinSocPct != null)
         ? Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100).toFixed(0)
-        : (hass ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--');
+        : (hass && this._hasEntity('sensor.accu_beschikbaar_wh') ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--');
+    } else if (timeToGoEntity && hass && this._hasEntity(timeToGoEntity)) {
+      // Sensor bestaat, maar geeft nu geen geldig getal (bijv. Victron rapporteert 'unavailable'
+      // tijdens het laden, want "tijd tot leeg" is dan niet van toepassing).
+      battDuur = '--';
+      battWh = (hass && battCapacityWh && battMinSocPct != null)
+        ? Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100).toFixed(0)
+        : (hass && this._hasEntity('sensor.accu_beschikbaar_wh') ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--');
     } else if (hass && battCapacityWh && battMinSocPct != null) {
       const _usableWh = Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100);
       battWh = _usableWh.toFixed(0);
@@ -2657,11 +2665,17 @@ class FinallySkyCardMobile extends HTMLElement {
     const _battPowM  = s('sensor.gx_device_dc_battery_power');
     let battWh, battDuur;
     const timeToGoEntity = (this._config && this._config.time_to_go_entity) || null;
-    if (timeToGoEntity && this._hasEntity(timeToGoEntity)) {
-      battDuur = (s(timeToGoEntity) / 3600).toFixed(1);
+    const _ttgRawM = timeToGoEntity ? parseFloat(this._hass?.states[timeToGoEntity]?.state) : NaN;
+    if (timeToGoEntity && Number.isFinite(_ttgRawM)) {
+      battDuur = (_ttgRawM / 3600).toFixed(1);
       battWh = (battCapacityWh && battMinSocPct != null)
         ? Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100).toFixed(0)
-        : s('sensor.accu_beschikbaar_wh').toFixed(0);
+        : (this._hasEntity('sensor.accu_beschikbaar_wh') ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--');
+    } else if (timeToGoEntity && this._hasEntity(timeToGoEntity)) {
+      battDuur = '--';
+      battWh = (battCapacityWh && battMinSocPct != null)
+        ? Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100).toFixed(0)
+        : (this._hasEntity('sensor.accu_beschikbaar_wh') ? s('sensor.accu_beschikbaar_wh').toFixed(0) : '--');
     } else if (battCapacityWh && battMinSocPct != null) {
       const _usableWhM = Math.max(0, battCapacityWh * (battSoc - battMinSocPct) / 100);
       battWh = _usableWhM.toFixed(0);
