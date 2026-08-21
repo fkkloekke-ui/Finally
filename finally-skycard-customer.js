@@ -381,6 +381,36 @@ class FinallySkyCard extends HTMLElement {
     this._genConfirmPopupOpen = false;
     this._resizeHandler = () => this._applyScale();
     window.addEventListener('resize', this._resizeHandler);
+    this._activeBuf = null; // t.b.v. stable_render dubbele buffering (voorkomt zwarte flits bij herrender)
+  }
+
+  // Past nieuw gerenderde HTML toe op de shadow DOM.
+  // Standaardgedrag (ongewijzigd, zoals altijd): directe innerHTML-vervanging.
+  // Met config-optie stable_render:true wordt dubbele buffering gebruikt: de nieuwe HTML wordt
+  // eerst onzichtbaar opgebouwd in een verborgen laag, en pas in een keer zichtbaar gemaakt zodra
+  // hij compleet klaar staat — de zichtbare laag wordt dus nooit leeggemaakt, geen flits meer.
+  _applyRenderedHtml(html) {
+    if (!(this._config && this._config.stable_render)) {
+      this.shadowRoot.innerHTML = html;
+      return;
+    }
+    if (!this._activeBuf) {
+      // Eerste render: bouw de twee buffer-lagen op.
+      this.shadowRoot.innerHTML = `
+        <div id="fc-buf-a" style="position:fixed;inset:0"></div>
+        <div id="fc-buf-b" style="position:fixed;inset:0;visibility:hidden"></div>
+      `;
+      this._activeBuf = 'a';
+    }
+    const showId = this._activeBuf === 'a' ? 'fc-buf-b' : 'fc-buf-a';
+    const hideId = this._activeBuf === 'a' ? 'fc-buf-a' : 'fc-buf-b';
+    const showEl = this.shadowRoot.getElementById(showId);
+    const hideEl = this.shadowRoot.getElementById(hideId);
+    if (!showEl || !hideEl) { this.shadowRoot.innerHTML = html; this._activeBuf = null; return; }
+    showEl.innerHTML = html; // buiten beeld opbouwen
+    showEl.style.visibility = 'visible';
+    hideEl.style.visibility = 'hidden';
+    this._activeBuf = this._activeBuf === 'a' ? 'b' : 'a';
   }
 
   _applyScale() {
@@ -1394,7 +1424,7 @@ class FinallySkyCard extends HTMLElement {
 
     const sparkline = this._waterSparkline(160, 44);
 
-    this.shadowRoot.innerHTML = `
+    const __html = `
 <style>
   :host {
     display: block; width: 100vw; height: 100vh; overflow: hidden;
@@ -2044,6 +2074,7 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
   </div>
  </div>
 </div>`;
+    this._applyRenderedHtml(__html);
 
     // Pas de 1920x1080-canvas schaal toe op het huidige schermformaat
     this._applyScale();
