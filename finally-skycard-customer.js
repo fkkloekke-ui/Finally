@@ -1816,6 +1816,9 @@ ${(this._config && this._config.show_battery_voltage) ? `
       <div class="sr" style="gap:10px"><span class="sk">Beschikbaar</span><span class="sv2" style="color:#88ccff">${battWh} Wh</span></div>
       <div class="sr" style="gap:10px"><span class="sk">Autonomie</span><span class="sv2" style="color:#aaffcc">${battDuur} uur te gaan</span></div>
       `}
+      ${(this._config && this._config.battery_temp_entity && this._hasEntity(this._config.battery_temp_entity)) ? `
+      <div class="sr" style="gap:10px"><span class="sk" style="${(this._config && this._config.hide_autonomie) ? 'font-size:17px' : ''}">Temp accu</span><span class="sv2" style="color:#ffaa66;${(this._config && this._config.hide_autonomie) ? 'font-size:17px' : ''}">${s(this._config.battery_temp_entity).toFixed(1)}°C</span></div>
+      ` : ''}
     </div>
 
 ${(this._config && this._config.show_wind) ? `
