@@ -1603,10 +1603,10 @@ class FinallySkyCard extends HTMLElement {
 
     <!-- Grid → boot: alleen zichtbaar bij actieve stroom -->
     ${gridActive ? `
-    <path d="M ${gridX1} ${gridY1} L ${bootFlowX-100} ${bootFlowY}" fill="none"
+    <path d="M ${gridX1} ${gridY1} L ${bootFlowX} ${bootFlowY}" fill="none"
           stroke="#00aaff" stroke-width="10" stroke-dasharray="14 8"
           opacity="0.2" filter="url(#glow-grid)" class="flow-anim"/>
-    <path d="M ${gridX1} ${gridY1} L ${bootFlowX-100} ${bootFlowY}" fill="none"
+    <path d="M ${gridX1} ${gridY1} L ${bootFlowX} ${bootFlowY}" fill="none"
           stroke="#00aaff" stroke-width="3" stroke-dasharray="14 8"
           opacity="0.7" class="flow-anim"/>
     ` : ''}
