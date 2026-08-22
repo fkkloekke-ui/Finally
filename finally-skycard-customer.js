@@ -591,7 +591,7 @@ class FinallySkyCard extends HTMLElement {
         <div class="sb-mini"><div class="sb-mini-lbl">DC spanning</div><div class="sb-mini-val" id="ep-dcv" style="color:#aaffcc">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">DC vermogen</div><div class="sb-mini-val" id="ep-dcw" style="color:#aaffcc">--</div></div>
       </div>
-      <div class="sb-section">Kosten &amp; rendement (&#8364;0.50/kWh)</div>
+      <div class="sb-section">Kosten &amp; rendement (&#8364;${((this._config && this._config.walstroom_kwh_prijs_entity && this._hass && parseFloat(this._hass.states[this._config.walstroom_kwh_prijs_entity]?.state)) || 0.50).toFixed(2)}/kWh)</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
         <div class="sb-mini"><div class="sb-mini-lbl">Zon besparing</div><div class="sb-mini-val" id="ep-pvkost" style="color:#ffd700">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Walstroom kosten</div><div class="sb-mini-val" id="ep-gkost" style="color:#00aaff">--</div></div>
@@ -810,6 +810,7 @@ class FinallySkyCard extends HTMLElement {
     // Walstroom-verbruik (configureerbaar, valt terug op Eriks eigen Shelly-sensoren)
     const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
     const walstroomVerbruikMaandEntity = (this._config && this._config.walstroom_verbruik_maand_entity) || 'sensor.walstroom_verbruik_maand';
+    const walstroomKwhPrijsEntity = (this._config && this._config.walstroom_kwh_prijs_entity) || null;
     const walstroomVerbruikWattEntity = (this._config && this._config.walstroom_verbruik_watt_entity) || 'sensor.walstroom_verbruik_watt';
     // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
     const pvVandaagEntity = (this._config && this._config.pv_vandaag_entity) || 'sensor.solar_yield_vandaag';
@@ -863,8 +864,9 @@ class FinallySkyCard extends HTMLElement {
       const rend  = inTot > 0 ? ((uitM / inTot) * 100).toFixed(1) + ' %' : '-- %';
       const dagNr = new Date().getDate();
       const gemDag = (dagNr > 0 && this._hasEntity(loadAanBoordMaandEntity)) ? (uitM / dagNr).toFixed(2) + ' kWh' : '--';
-      T('ep-pvkost', this._hasEntity(pvMaandEntity) ? '€ ' + (pvM2 * 0.50).toFixed(2) : '--');
-      T('ep-gkost',  this._hasEntity(walstroomVerbruikMaandEntity) ? '€ ' + (walM * 0.50).toFixed(2) : '--');
+      const _kwhPrijs = walstroomKwhPrijsEntity ? (parseFloat(this._hass.states[walstroomKwhPrijsEntity]?.state) || 0.50) : 0.50;
+      T('ep-pvkost', this._hasEntity(pvMaandEntity) ? '€ ' + (pvM2 * _kwhPrijs).toFixed(2) : '--');
+      T('ep-gkost',  this._hasEntity(walstroomVerbruikMaandEntity) ? '€ ' + (walM * _kwhPrijs).toFixed(2) : '--');
       T('ep-rend',   rend);
       T('ep-gemdag', gemDag);
       // Generator dieselkosten
@@ -1908,6 +1910,17 @@ ${(this._config && this._config.hide_zon_onder) ? '' : `
         </div>
       </div>
 
+      ${(this._config && this._config.walstroom_kwh_prijs_entity) ? `
+      <div style="margin-bottom:28px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">STROOMPRIJS (PER KWH)</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:16px">
+          <div id="wi-prijs-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-prijs-val" style="font-size:32px;font-weight:800;color:#66ccff">-- €</div></div>
+          <div id="wi-prijs-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+        </div>
+      </div>
+      ` : ''}
+
       <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:20px;margin-bottom:8px">
         <div style="font-size:11px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:16px">OVERBELASTING</div>
       </div>
@@ -2117,6 +2130,7 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
     const walstroomSocAanEntity = (this._config && this._config.walstroom_soc_aan_entity) || 'input_number.walstroom_soc_aan';
     const walstroomSocUitEntity = (this._config && this._config.walstroom_soc_uit_entity) || 'input_number.walstroom_soc_uit';
     const walstroomZonDrempelEntity = (this._config && this._config.walstroom_zon_drempel_entity) || 'input_number.walstroom_zon_drempel';
+    const walstroomKwhPrijsEntity = (this._config && this._config.walstroom_kwh_prijs_entity) || null;
     const walstroomOvlAanEntity = (this._config && this._config.walstroom_overbelasting_aan_entity) || 'input_number.walstroom_overbelasting_aan';
     const walstroomOvlUitEntity = (this._config && this._config.walstroom_overbelasting_uit_entity) || 'input_number.walstroom_overbelasting_uit';
     const walstroomOvlAanDuurEntity = (this._config && this._config.walstroom_overbelasting_aan_duur_entity) || 'input_number.walstroom_overbelasting_aan_duur';
@@ -2237,15 +2251,17 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
       const aan = parseFloat(this._hass.states[walstroomSocAanEntity]?.state) || 30;
       const uit = parseFloat(this._hass.states[walstroomSocUitEntity]?.state) || 80;
       const zon = parseFloat(this._hass.states[walstroomZonDrempelEntity]?.state) || 300;
+      const prijs = walstroomKwhPrijsEntity ? (parseFloat(this._hass.states[walstroomKwhPrijsEntity]?.state) || 0.50) : 0.50;
       const ovlAan = parseFloat(this._hass.states[walstroomOvlAanEntity]?.state) || 4500;
       const ovlUit = parseFloat(this._hass.states[walstroomOvlUitEntity]?.state) || 3000;
       const ovlAanDuur = parseFloat(this._hass.states[walstroomOvlAanDuurEntity]?.state) || 30;
       const ovlUitDuur = parseFloat(this._hass.states[walstroomOvlUitDuurEntity]?.state) || 30;
-      wiPopup._socAan = aan; wiPopup._socUit = uit; wiPopup._zon = zon;
+      wiPopup._socAan = aan; wiPopup._socUit = uit; wiPopup._zon = zon; wiPopup._prijs = prijs;
       wiPopup._ovlAan = ovlAan; wiPopup._ovlUit = ovlUit; wiPopup._ovlAanDuur = ovlAanDuur; wiPopup._ovlUitDuur = ovlUitDuur;
       const v1 = wiPopup.querySelector('#wi-soc-aan-val');
       const v2 = wiPopup.querySelector('#wi-soc-uit-val');
       const v3 = wiPopup.querySelector('#wi-zon-val');
+      const v3b = wiPopup.querySelector('#wi-prijs-val');
       const v4 = wiPopup.querySelector('#wi-ovl-aan-val');
       const v5 = wiPopup.querySelector('#wi-ovl-uit-val');
       const v6 = wiPopup.querySelector('#wi-ovl-aanduur-val');
@@ -2253,6 +2269,7 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
       if (v1) v1.textContent = aan + '%';
       if (v2) v2.textContent = uit + '%';
       if (v3) v3.textContent = zon + ' W';
+      if (v3b) v3b.textContent = '€ ' + prijs.toFixed(2);
       if (v4) v4.textContent = ovlAan + ' W';
       if (v5) v5.textContent = ovlUit + ' W';
       if (v6) v6.textContent = ovlAanDuur + ' s';
@@ -2301,6 +2318,16 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
         wiPopup._zon = Math.min(1000, (wiPopup._zon || 300) + 50);
         const el = wiPopup.querySelector('#wi-zon-val'); if (el) el.textContent = wiPopup._zon + ' W';
         _wiSet(walstroomZonDrempelEntity, wiPopup._zon);
+      });
+      _btn('wi-prijs-min', () => {
+        wiPopup._prijs = Math.max(0, Math.round(((wiPopup._prijs || 0.50) - 0.01) * 100) / 100);
+        const el = wiPopup.querySelector('#wi-prijs-val'); if (el) el.textContent = '€ ' + wiPopup._prijs.toFixed(2);
+        if (walstroomKwhPrijsEntity) _wiSet(walstroomKwhPrijsEntity, wiPopup._prijs);
+      });
+      _btn('wi-prijs-plus', () => {
+        wiPopup._prijs = Math.min(2, Math.round(((wiPopup._prijs || 0.50) + 0.01) * 100) / 100);
+        const el = wiPopup.querySelector('#wi-prijs-val'); if (el) el.textContent = '€ ' + wiPopup._prijs.toFixed(2);
+        if (walstroomKwhPrijsEntity) _wiSet(walstroomKwhPrijsEntity, wiPopup._prijs);
       });
       _btn('wi-ovl-aan-min', () => {
         wiPopup._ovlAan = Math.max(2000, (wiPopup._ovlAan || 4500) - 100);
@@ -2617,6 +2644,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const walstroomSocAanEntity = (this._config && this._config.walstroom_soc_aan_entity) || 'input_number.walstroom_soc_aan';
     const walstroomSocUitEntity = (this._config && this._config.walstroom_soc_uit_entity) || 'input_number.walstroom_soc_uit';
     const walstroomZonDrempelEntity = (this._config && this._config.walstroom_zon_drempel_entity) || 'input_number.walstroom_zon_drempel';
+    const walstroomKwhPrijsEntity = (this._config && this._config.walstroom_kwh_prijs_entity) || null;
     const walstroomOvlAanEntity = (this._config && this._config.walstroom_overbelasting_aan_entity) || 'input_number.walstroom_overbelasting_aan';
     const walstroomOvlUitEntity = (this._config && this._config.walstroom_overbelasting_uit_entity) || 'input_number.walstroom_overbelasting_uit';
     const walstroomOvlAanDuurEntity = (this._config && this._config.walstroom_overbelasting_aan_duur_entity) || 'input_number.walstroom_overbelasting_aan_duur';
@@ -2717,14 +2745,15 @@ class FinallySkyCardMobile extends HTMLElement {
     const pvMax      = 1800;
     const pvPct      = Math.min(pvW / pvMax * 100, 100);
     const mpptState  = st(mpptStateEntity);
-    const pvBesparing = (parseFloat(pvMaand) * 0.50).toFixed(2);
+    const _kwhPrijsM = walstroomKwhPrijsEntity ? (parseFloat(this._hass?.states[walstroomKwhPrijsEntity]?.state) || 0.50) : 0.50;
+    const pvBesparing = (parseFloat(pvMaand) * _kwhPrijsM).toFixed(2);
     // Walstroom-verbruik (configureerbaar, valt terug op Eriks eigen Shelly-sensoren)
     const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
     const walstroomVerbruikMaandEntity = (this._config && this._config.walstroom_verbruik_maand_entity) || 'sensor.walstroom_verbruik_maand';
     const walstroomVerbruikWattEntity = (this._config && this._config.walstroom_verbruik_watt_entity) || 'sensor.walstroom_verbruik_watt';
     const walDag     = s(walstroomDagverbruikEntity).toFixed(2);
     const walMaand   = s(walstroomVerbruikMaandEntity).toFixed(2);
-    const walKosten  = (parseFloat(walMaand) * 0.50).toFixed(2);
+    const walKosten  = (parseFloat(walMaand) * _kwhPrijsM).toFixed(2);
     const loadDagEntity = (this._config && this._config.load_dag_entity) || 'sensor.gx_device_ac_uitgang_dagverbruik';
     const loadMaandEntity = (this._config && this._config.load_maand_entity) || 'sensor.gx_device_quattro_uitgang_maandoverzicht';
     const loadDag    = s(loadDagEntity).toFixed(2);
@@ -3625,6 +3654,17 @@ ${(this._config && this._config.show_generator) ? `
         </div>
       </div>
 
+      ${(this._config && this._config.walstroom_kwh_prijs_entity) ? `
+      <div style="margin-bottom:24px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">STROOMPRIJS (PER KWH)</div>
+        <div style="display:flex;align-items:center;justify-content:center;gap:20px">
+          <div id="m-wi-prijs-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
+          <div id="m-wi-prijs-val" style="font-size:32px;font-weight:800;color:#66ccff;min-width:70px">-- €</div>
+          <div id="m-wi-prijs-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+        </div>
+      </div>
+      ` : ''}
+
       <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:18px;margin-bottom:8px">
         <div style="font-size:11px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:14px">OVERBELASTING</div>
       </div>
@@ -3987,15 +4027,17 @@ ${(this._config && this._config.show_generator) ? `
       const aan = parseFloat(this._hass.states[walstroomSocAanEntity]?.state) || 30;
       const uit = parseFloat(this._hass.states[walstroomSocUitEntity]?.state) || 80;
       const zon = parseFloat(this._hass.states[walstroomZonDrempelEntity]?.state) || 300;
+      const prijs = walstroomKwhPrijsEntity ? (parseFloat(this._hass.states[walstroomKwhPrijsEntity]?.state) || 0.50) : 0.50;
       const ovlAan = parseFloat(this._hass.states[walstroomOvlAanEntity]?.state) || 4500;
       const ovlUit = parseFloat(this._hass.states[walstroomOvlUitEntity]?.state) || 3000;
       const ovlAanDuur = parseFloat(this._hass.states[walstroomOvlAanDuurEntity]?.state) || 30;
       const ovlUitDuur = parseFloat(this._hass.states[walstroomOvlUitDuurEntity]?.state) || 30;
-      mWiPopup._socAan = aan; mWiPopup._socUit = uit; mWiPopup._zon = zon;
+      mWiPopup._socAan = aan; mWiPopup._socUit = uit; mWiPopup._zon = zon; mWiPopup._prijs = prijs;
       mWiPopup._ovlAan = ovlAan; mWiPopup._ovlUit = ovlUit; mWiPopup._ovlAanDuur = ovlAanDuur; mWiPopup._ovlUitDuur = ovlUitDuur;
       const v1 = mWiPopup.querySelector('#m-wi-soc-aan-val');
       const v2 = mWiPopup.querySelector('#m-wi-soc-uit-val');
       const v3 = mWiPopup.querySelector('#m-wi-zon-val');
+      const v3b = mWiPopup.querySelector('#m-wi-prijs-val');
       const v4 = mWiPopup.querySelector('#m-wi-ovl-aan-val');
       const v5 = mWiPopup.querySelector('#m-wi-ovl-uit-val');
       const v6 = mWiPopup.querySelector('#m-wi-ovl-aanduur-val');
@@ -4025,6 +4067,8 @@ ${(this._config && this._config.show_generator) ? `
       _mWiBtn('m-wi-soc-uit-plus', () => { mWiPopup._socUit = Math.min(100, (mWiPopup._socUit||80)+5); const el=mWiPopup.querySelector('#m-wi-soc-uit-val'); if(el) el.textContent=mWiPopup._socUit+'%'; _mWiSet(walstroomSocUitEntity, mWiPopup._socUit); });
       _mWiBtn('m-wi-zon-min', () => { mWiPopup._zon = Math.max(0, (mWiPopup._zon||300)-50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet(walstroomZonDrempelEntity, mWiPopup._zon); });
       _mWiBtn('m-wi-zon-plus', () => { mWiPopup._zon = Math.min(1000, (mWiPopup._zon||300)+50); const el=mWiPopup.querySelector('#m-wi-zon-val'); if(el) el.textContent=mWiPopup._zon+' W'; _mWiSet(walstroomZonDrempelEntity, mWiPopup._zon); });
+      _mWiBtn('m-wi-prijs-min', () => { mWiPopup._prijs = Math.max(0, Math.round(((mWiPopup._prijs||0.50)-0.01)*100)/100); const el=mWiPopup.querySelector('#m-wi-prijs-val'); if(el) el.textContent='€ '+mWiPopup._prijs.toFixed(2); if (walstroomKwhPrijsEntity) _mWiSet(walstroomKwhPrijsEntity, mWiPopup._prijs); });
+      _mWiBtn('m-wi-prijs-plus', () => { mWiPopup._prijs = Math.min(2, Math.round(((mWiPopup._prijs||0.50)+0.01)*100)/100); const el=mWiPopup.querySelector('#m-wi-prijs-val'); if(el) el.textContent='€ '+mWiPopup._prijs.toFixed(2); if (walstroomKwhPrijsEntity) _mWiSet(walstroomKwhPrijsEntity, mWiPopup._prijs); });
       _mWiBtn('m-wi-ovl-aan-min', () => { mWiPopup._ovlAan = Math.max(2000, (mWiPopup._ovlAan||4500)-100); const el=mWiPopup.querySelector('#m-wi-ovl-aan-val'); if(el) el.textContent=mWiPopup._ovlAan+' W'; _mWiSet(walstroomOvlAanEntity, mWiPopup._ovlAan); });
       _mWiBtn('m-wi-ovl-aan-plus', () => { mWiPopup._ovlAan = Math.min(5000, (mWiPopup._ovlAan||4500)+100); const el=mWiPopup.querySelector('#m-wi-ovl-aan-val'); if(el) el.textContent=mWiPopup._ovlAan+' W'; _mWiSet(walstroomOvlAanEntity, mWiPopup._ovlAan); });
       _mWiBtn('m-wi-ovl-uit-min', () => { mWiPopup._ovlUit = Math.max(1000, (mWiPopup._ovlUit||3000)-100); const el=mWiPopup.querySelector('#m-wi-ovl-uit-val'); if(el) el.textContent=mWiPopup._ovlUit+' W'; _mWiSet(walstroomOvlUitEntity, mWiPopup._ovlUit); });
