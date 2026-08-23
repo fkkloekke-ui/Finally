@@ -4045,6 +4045,7 @@ ${(this._config && this._config.show_generator) ? `
       if (v1) v1.textContent = aan + '%';
       if (v2) v2.textContent = uit + '%';
       if (v3) v3.textContent = zon + ' W';
+      if (v3b) v3b.textContent = '€ ' + prijs.toFixed(2);
       if (v4) v4.textContent = ovlAan + ' W';
       if (v5) v5.textContent = ovlUit + ' W';
       if (v6) v6.textContent = ovlAanDuur + ' s';
