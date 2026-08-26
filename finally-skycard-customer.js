@@ -2114,9 +2114,9 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
 
 ${(this._config && this._config.dc_load_entity) ? `
     <div class="stat" style="border-color:rgba(255,200,0,0.2);display:flex;flex-direction:column;gap:4px">
-      <div class="sl">VERBRUIK</div>
-      <div class="sr" style="gap:10px"><span class="sk">12V</span><span class="sv2" style="color:#ffcc00">${s(this._config.dc_load_entity).toFixed(0)} W</span></div>
-      <div class="sr" style="gap:10px"><span class="sk">230V</span><span class="sv2" style="color:#00d7ff">${(this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0).toFixed(0)} W</span></div>
+      <div class="sl" style="font-size:13px">VERBRUIK</div>
+      <div class="sr" style="gap:10px"><span class="sk" style="font-size:17px">12V</span><span class="sv2" style="color:#ffcc00;font-size:17px">${s(this._config.dc_load_entity).toFixed(0)} W</span></div>
+      <div class="sr" style="gap:10px"><span class="sk" style="font-size:17px">230V</span><span class="sv2" style="color:#00d7ff;font-size:17px">${(this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0).toFixed(0)} W</span></div>
     </div>
 ` : ''}
 
