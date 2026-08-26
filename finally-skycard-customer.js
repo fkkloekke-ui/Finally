@@ -3271,9 +3271,9 @@ ${(this._config && this._config.boat_below_hero) ? `
       </div>
       <!-- Walstroom -->
       <div style="display:flex;align-items:center;gap:10px;padding:8px 0 0;border-top:0.5px solid rgba(255,255,255,0.06)">
-        <span class="dot" style="background:${gridActive ? '#00aaff' : gridSpanning ? '#ffaa00' : 'rgba(255,255,255,0.15)'};${gridActive ? 'box-shadow:0 0 6px #00aaff' : gridSpanning ? 'box-shadow:0 0 6px #ffaa00' : ''}"></span>
+        <span class="dot" style="background:${gridActive ? '#00aaff' : (gridSpanning || walStandby) ? '#ffaa00' : 'rgba(255,255,255,0.15)'};${gridActive ? 'box-shadow:0 0 6px #00aaff' : (gridSpanning || walStandby) ? 'box-shadow:0 0 6px #ffaa00' : ''}"></span>
         <span style="font-size:13px;color:rgba(255,255,255,0.95)">WALSTROOM</span>
-        <span style="font-size:15px;font-weight:700;color:${gridActive ? '#00aaff' : gridSpanning ? '#ffaa00' : 'rgba(255,255,255,0.2)'};margin-left:auto">${gridActive ? gridW + ' W · ' + acInV + ' V' : gridSpanning ? acInV + ' V · stand-by' : 'niet aangesloten'}</span>
+        <span style="font-size:15px;font-weight:700;color:${gridActive ? '#00aaff' : (gridSpanning || walStandby) ? '#ffaa00' : 'rgba(255,255,255,0.2)'};margin-left:auto">${gridActive ? gridW + ' W · ' + acInV + ' V' : gridSpanning ? acInV + ' V · stand-by' : walStandby ? 'stand-by (socket uit)' : 'niet aangesloten'}</span>
       </div>
     </div>
   </div>
@@ -3594,6 +3594,10 @@ ${(this._config && this._config.show_kabola) ? `
     <div class="card-grid" style="margin-bottom:8px">
       <div class="touch-btn" id="m-wal-socket-btn"
            style="border-color:rgba(${walSocketAan?'0,255,136':(walStandby?'255,165,0':'255,255,255')},${walSocketAan?'0.5':(walStandby?'0.5':'0.2')});background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.04)')}">
+        <div style="font-size:16px;font-weight:800;color:${gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)'}">
+          ${gridActive ? gridW+' W' : (gridSpanning||walStandby) ? acInV+' V' : 'OFF-GRID'}
+        </div>
+        ${gridActive ? '<div style="color:#00aaff;font-size:12px;margin-bottom:4px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:12px;margin-bottom:4px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:12px;margin-bottom:4px">&#9679; OFF-GRID</div>'}
         <div style="font-size:22px;margin-bottom:4px">🔌</div>
         <div class="lbl">WALSTROOM</div>
         <div style="font-size:20px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.3)')}">${walSocketAan?'● AAN':(walStandby?'◐ STANDBY':'○ UIT')}</div>
