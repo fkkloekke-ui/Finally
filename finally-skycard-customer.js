@@ -387,18 +387,22 @@ class FinallySkyCard extends HTMLElement {
   // Past nieuw gerenderde HTML toe op de shadow DOM.
   // Standaardgedrag (ongewijzigd, zoals altijd): directe innerHTML-vervanging.
   // Met config-optie stable_render:true wordt dubbele buffering gebruikt: de nieuwe HTML wordt
-  // eerst onzichtbaar opgebouwd in een verborgen laag, en pas in een keer zichtbaar gemaakt zodra
-  // hij compleet klaar staat — de zichtbare laag wordt dus nooit leeggemaakt, geen flits meer.
-  _applyRenderedHtml(html) {
+  // eerst buiten beeld (niet met visibility:hidden — dat laat de browser namelijk NIETS
+  // voorbereiden, layout/paint gebeurt dan pas op het moment van zichtbaar maken, wat het
+  // hele doel ondermijnt) opgebouwd, en pas zichtbaar gemaakt zodra de browser 'm daadwerkelijk
+  // heeft kunnen tekenen — de zichtbare laag wordt dus nooit leeggemaakt, geen flits meer.
+  _applyRenderedHtml(html, afterSwap) {
     if (!(this._config && this._config.stable_render)) {
       this.shadowRoot.innerHTML = html;
+      if (afterSwap) afterSwap();
       return;
     }
     if (!this._activeBuf) {
-      // Eerste render: bouw de twee buffer-lagen op.
+      // Eerste render: bouw de twee buffer-lagen op. Beide starten "on-screen"; de inactieve
+      // wordt hieronder direct off-screen gezet (niet visibility:hidden).
       this.shadowRoot.innerHTML = `
         <div id="fc-buf-a" style="position:fixed;inset:0"></div>
-        <div id="fc-buf-b" style="position:fixed;inset:0;visibility:hidden"></div>
+        <div id="fc-buf-b" style="position:fixed;top:0;left:-9999px;width:100vw;height:100vh"></div>
       `;
       this._activeBuf = 'a';
     }
@@ -406,14 +410,26 @@ class FinallySkyCard extends HTMLElement {
     const hideId = this._activeBuf === 'a' ? 'fc-buf-a' : 'fc-buf-b';
     const showEl = this.shadowRoot.getElementById(showId);
     const hideEl = this.shadowRoot.getElementById(hideId);
-    if (!showEl || !hideEl) { this.shadowRoot.innerHTML = html; this._activeBuf = null; return; }
-    showEl.innerHTML = html; // buiten beeld opbouwen
-    showEl.style.visibility = 'visible';
-    hideEl.style.visibility = 'hidden';
-    hideEl.innerHTML = ''; // meteen leegmaken: voorkomt dubbele elementen met hetzelfde ID
-                            // (anders pakt getElementById soms de verkeerde/verborgen kopie,
-                            // bijv. bij _applyScale() -> canvas "vliegt" heen en weer)
+    if (!showEl || !hideEl) {
+      this.shadowRoot.innerHTML = html;
+      this._activeBuf = null;
+      if (afterSwap) afterSwap();
+      return;
+    }
+    showEl.innerHTML = html; // buiten beeld (links van het canvas) opbouwen — browser rendert dit gewoon echt
     this._activeBuf = this._activeBuf === 'a' ? 'b' : 'a';
+    // Dubbele rAF: geeft de browser twee volledige frames om de nieuwe inhoud daadwerkelijk
+    // te tekenen voordat we 'm on-screen zetten — pas dan is de swap echt naadloos.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        showEl.style.left = '0';
+        hideEl.style.left = '-9999px';
+        hideEl.innerHTML = ''; // meteen leegmaken: voorkomt dubbele elementen met hetzelfde ID
+                                // (anders pakt getElementById soms de verkeerde/verborgen kopie,
+                                // bijv. bij _applyScale() -> canvas "vliegt" heen en weer)
+        if (afterSwap) afterSwap(); // schaal/animaties/listeners pas NU, op de echte zichtbare buffer
+      });
+    });
   }
 
   _applyScale() {
@@ -2096,34 +2112,43 @@ ${(this._config && this._config.hide_waterhoogte) ? '' : `
     </div>
 `}
 
+${(this._config && this._config.dc_load_entity) ? `
+    <div class="stat" style="border-color:rgba(255,200,0,0.2);display:flex;flex-direction:column;gap:4px">
+      <div class="sl">VERBRUIK</div>
+      <div class="sr" style="gap:10px"><span class="sk">12V</span><span class="sv2" style="color:#ffcc00">${s(this._config.dc_load_entity).toFixed(0)} W</span></div>
+      <div class="sr" style="gap:10px"><span class="sk">230V</span><span class="sv2" style="color:#00d7ff">${(this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0).toFixed(0)} W</span></div>
+    </div>
+` : ''}
+
+
 
 
   </div>
  </div>
 </div>`;
-    this._applyRenderedHtml(__html);
+    this._applyRenderedHtml(__html, () => {
+      // Pas de 1920x1080-canvas schaal toe op het huidige schermformaat
+      this._applyScale();
 
-    // Pas de 1920x1080-canvas schaal toe op het huidige schermformaat
-    this._applyScale();
+      // Start flow animatie
+      this._startFlowAnim();
+      // Start regen animatie (uit te zetten via disable_rain_animation, scheelt onnodig herrenderen op kiosk-schermen)
+      if (!(this._config && this._config.disable_rain_animation)) {
+        this._startRainAnim(wcond);
+      }
 
-    // Start flow animatie
-    this._startFlowAnim();
-    // Start regen animatie (uit te zetten via disable_rain_animation, scheelt onnodig herrenderen op kiosk-schermen)
-    if (!(this._config && this._config.disable_rain_animation)) {
-      this._startRainAnim(wcond);
-    }
+      // Herattach overlay container als die bestaat (overleeft geen innerHTML reset)
+      if (this._overlayContainer) {
+        this.shadowRoot.appendChild(this._overlayContainer);
+      }
 
-    // Herattach overlay container als die bestaat (overleeft geen innerHTML reset)
-    if (this._overlayContainer) {
-      this.shadowRoot.appendChild(this._overlayContainer);
-    }
-
-    // Pas tekstkleur aan op basis van achtergrond
-    const profile = this._skyLabelProfile(skyImg);
-    const host = this.shadowRoot.host || this.shadowRoot.querySelector(':host') || this;
-    this.style.setProperty('--lbl-dim', profile.dim);
-    this.style.setProperty('--lbl-mid', profile.mid);
-    this.style.setProperty('--lbl-sub', profile.sub);
+      // Pas tekstkleur aan op basis van achtergrond
+      const profile = this._skyLabelProfile(skyImg);
+      const host = this.shadowRoot.host || this.shadowRoot.querySelector(':host') || this;
+      this.style.setProperty('--lbl-dim', profile.dim);
+      this.style.setProperty('--lbl-mid', profile.mid);
+      this.style.setProperty('--lbl-sub', profile.sub);
+    });
   }
 
   _startFlowAnim() {
@@ -3418,6 +3443,16 @@ ${(this._config && this._config.show_kabola) ? `
     </div>
     <div class="card" style="margin-bottom:8px">
       <div class="row"><span class="row-lbl">Wind</span><span class="row-val">${windDisplay} ${windUnitLbl} · ${windDir} · ${windBft} Bft</span></div>
+      ${(this._config && this._config.dc_load_entity) ? `
+      <div class="row">
+        <span class="row-lbl">Verbruik 12V</span>
+        <span class="row-val" style="color:#ffcc00">${s(this._config.dc_load_entity).toFixed(0)} W</span>
+      </div>
+      <div class="row">
+        <span class="row-lbl">Verbruik 230V</span>
+        <span class="row-val" style="color:#00d7ff">${(this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0).toFixed(0)} W</span>
+      </div>
+      ` : ''}
       ${(this._config && this._config.hide_waterhoogte) ? '' : `
       <div class="row">
         <span class="row-lbl">Waterstand Hasselt</span>
