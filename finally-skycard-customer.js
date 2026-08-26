@@ -2831,7 +2831,9 @@ class FinallySkyCardMobile extends HTMLElement {
     const windDisplay = windKm === '--' ? '--' : (windUnitMs ? (parseFloat(windKm) / 3.6).toFixed(1) : windKm);
     const windUnitLbl = windUnitMs ? 'm/s' : 'km/h';
     const windBft    = _wAttr ? (parseFloat(windKmM) < 1 ? 0 : parseFloat(windKmM) < 6 ? 1 : parseFloat(windKmM) < 12 ? 2 : parseFloat(windKmM) < 20 ? 3 : parseFloat(windKmM) < 29 ? 4 : parseFloat(windKmM) < 39 ? 5 : parseFloat(windKmM) < 50 ? 6 : parseFloat(windKmM) < 62 ? 7 : 8) : '--';
-    const baro       = (_wAttr && _wAttr.pressure != null) ? Math.round(_wAttr.pressure) : '--';
+    const pressureEntity = (this._config && this._config.pressure_entity) || null;
+    const _pressureAttr = pressureEntity ? this._hass?.states[pressureEntity]?.attributes?.pressure : null;
+    const baro       = (_pressureAttr != null) ? Math.round(_pressureAttr) : (_wAttr && _wAttr.pressure != null) ? Math.round(_wAttr.pressure) : '--';
     const water      = s(waterhoogteEntity).toFixed(0);
     const waterVerw  = s(waterhoogteVerwachtEntity).toFixed(0);
 
