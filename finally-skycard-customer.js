@@ -1444,6 +1444,8 @@ class FinallySkyCard extends HTMLElement {
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = hass ? st(walstroomSwitchEntity) === 'on' : false;
     const walOverride  = hass ? st(walstroomOverrideEntity) === 'on' : false;
+    const walstroomSpanningEntity = (this._config && this._config.walstroom_spanning_entity) || null;
+    const walStandby = (hass && walstroomSpanningEntity) ? (!walSocketAan && s(walstroomSpanningEntity) > 200) : false;
     const battActive = Math.abs(battPow) > 10;
 
     // Tijd
@@ -1706,8 +1708,8 @@ class FinallySkyCard extends HTMLElement {
       <div id="wal-limit-btn" data-action="wal-limit" style="margin-top:6px;cursor:pointer;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:6px;padding:3px 8px;font-size:12px;color:rgba(255,255,255,0.95);text-align:center">
         &#9889; Limiet: ${acInputLimit} A
       </div>
-      <div id="wal-socket-btn" style="margin-top:5px;cursor:pointer;background:${walSocketAan?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.06)'};border:1px solid ${walSocketAan?'rgba(0,255,136,0.5)':'rgba(255,255,255,0.2)'};border-radius:6px;padding:5px 8px;font-size:14px;font-weight:700;color:${walSocketAan?'#00ff88':'rgba(255,255,255,0.45)'};text-align:center">
-        ${walSocketAan?'&#9679; SOCKET AAN':'&#9675; SOCKET UIT'}
+      <div id="wal-socket-btn" style="margin-top:5px;cursor:pointer;background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.06)')};border:1px solid ${walSocketAan?'rgba(0,255,136,0.5)':(walStandby?'rgba(255,165,0,0.5)':'rgba(255,255,255,0.2)')};border-radius:6px;padding:5px 8px;font-size:14px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.45)')};text-align:center">
+        ${walSocketAan?'&#9679; SOCKET AAN':(walStandby?'&#9680; STANDBY (spanning aanwezig)':'&#9675; SOCKET UIT')}
       </div>
       <div id="wal-override-btn" style="margin-top:4px;cursor:pointer;background:${walOverride?'rgba(255,165,0,0.12)':'rgba(0,255,136,0.08)'};border:0.5px solid ${walOverride?'rgba(255,165,0,0.5)':'rgba(0,255,136,0.3)'};border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;color:${walOverride?'#ffaa44':'#00ff88'};text-align:center;display:flex;align-items:center;justify-content:center;gap:5px">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${walOverride?'#ffaa44':'#00ff88'}" stroke-width="2.5">${walOverride?'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>':'<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'}</svg>
@@ -2868,6 +2870,8 @@ class FinallySkyCardMobile extends HTMLElement {
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = st(walstroomSwitchEntity) === 'on';
     const walOverride  = st(walstroomOverrideEntity) === 'on';
+    const walstroomSpanningEntity = (this._config && this._config.walstroom_spanning_entity) || null;
+    const walStandby = walstroomSpanningEntity ? (!walSocketAan && s(walstroomSpanningEntity) > 200) : false;
     const knmiCode   = st(weerCodeEntity);
     const walstroom  = s(walstroomVerbruikWattEntity).toFixed(0);
 
@@ -3589,11 +3593,11 @@ ${(this._config && this._config.show_kabola) ? `
     <!-- Socket schakelaar -->
     <div class="card-grid" style="margin-bottom:8px">
       <div class="touch-btn" id="m-wal-socket-btn"
-           style="border-color:rgba(0,255,136,${walSocketAan?'0.5':'0.2'});background:${walSocketAan?'rgba(0,255,136,0.12)':'rgba(255,255,255,0.04)'}">
+           style="border-color:rgba(${walSocketAan?'0,255,136':(walStandby?'255,165,0':'255,255,255')},${walSocketAan?'0.5':(walStandby?'0.5':'0.2')});background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.04)')}">
         <div style="font-size:22px;margin-bottom:4px">🔌</div>
         <div class="lbl">WALSTROOM</div>
-        <div style="font-size:20px;font-weight:700;color:${walSocketAan?'#00ff88':'rgba(255,255,255,0.3)'}">${walSocketAan?'● AAN':'○ UIT'}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">tik om te schakelen</div>
+        <div style="font-size:20px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.3)')}">${walSocketAan?'● AAN':(walStandby?'◐ STANDBY':'○ UIT')}</div>
+        <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">${walStandby ? 'spanning aanwezig, niet ingeschakeld' : 'tik om te schakelen'}</div>
       </div>
       <div class="touch-btn" id="m-wal-override-btn"
            style="border-color:rgba(255,165,0,${walOverride?'0.5':'0.2'});background:${walOverride?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.04)'}">
