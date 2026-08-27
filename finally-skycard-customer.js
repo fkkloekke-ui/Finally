@@ -392,15 +392,25 @@ class FinallySkyCard extends HTMLElement {
   // hele doel ondermijnt) opgebouwd, en pas zichtbaar gemaakt zodra de browser 'm daadwerkelijk
   // heeft kunnen tekenen — de zichtbare laag wordt dus nooit leeggemaakt, geen flits meer.
   _applyRenderedHtml(html, afterSwap) {
+    // Stijlblok (honderden regels CSS, nooit dynamisch) wordt precies ÉÉN keer neergezet.
+    // Bij elke render opnieuw meesturen dwingt de browser om de hele stylesheet opnieuw te
+    // parsen/berekenen — vermoedelijk een groot deel van de zichtbare "flits" bij elke render.
+    if (!this._styleInjected) {
+      this.shadowRoot.innerHTML = (this._styleBlock || '') + '<div id="fc-root"></div>';
+      this._styleInjected = true;
+    }
+    const rootEl = this.shadowRoot.getElementById('fc-root');
+    if (!rootEl) { this._styleInjected = false; return this._applyRenderedHtml(html, afterSwap); }
+
     if (!(this._config && this._config.stable_render)) {
-      this.shadowRoot.innerHTML = html;
+      rootEl.innerHTML = html;
       if (afterSwap) afterSwap();
       return;
     }
     if (!this._activeBuf) {
       // Eerste render: bouw de twee buffer-lagen op. Beide starten "on-screen"; de inactieve
       // wordt hieronder direct off-screen gezet (niet visibility:hidden).
-      this.shadowRoot.innerHTML = `
+      rootEl.innerHTML = `
         <div id="fc-buf-a" style="position:fixed;inset:0"></div>
         <div id="fc-buf-b" style="position:fixed;top:0;left:-9999px;width:100vw;height:100vh"></div>
       `;
@@ -411,7 +421,7 @@ class FinallySkyCard extends HTMLElement {
     const showEl = this.shadowRoot.getElementById(showId);
     const hideEl = this.shadowRoot.getElementById(hideId);
     if (!showEl || !hideEl) {
-      this.shadowRoot.innerHTML = html;
+      rootEl.innerHTML = html;
       this._activeBuf = null;
       if (afterSwap) afterSwap();
       return;
@@ -1455,7 +1465,7 @@ class FinallySkyCard extends HTMLElement {
 
     const sparkline = this._waterSparkline(160, 44);
 
-    const __html = `
+    this._styleBlock = `
 <style>
   :host {
     display: block; width: 100vw; height: 100vh; overflow: hidden;
@@ -1532,7 +1542,8 @@ class FinallySkyCard extends HTMLElement {
   .sb-icon { width: var(--sb-icon, 40px); height: var(--sb-icon, 40px); display: block; }
   .sb-lbl { font-size: var(--sb-font, 11px); color: var(--lbl-sub); letter-spacing: 0.8px;
     text-transform: uppercase; text-align: center; font-family: sans-serif; }
-</style>
+</style>`;
+    const __html = `
 
 <div class="wrap" style="${(() => {
   const c = this._config || {};
