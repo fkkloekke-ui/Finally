@@ -1813,7 +1813,7 @@ ${(this._config && this._config.hide_bms) ? '' : `
           <rect x="1" y="5" width="24" height="42" rx="4" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
           <rect x="5" y="${42 - Math.max(4, 34 * (battSoc/100))}" width="16" height="${Math.max(4, 34 * (battSoc/100))}" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
         </svg>
-        <div style="font-size:${(this._config && this._config.soc_font_size) || 38}px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${Math.round(battSoc)}%</div>
+        <div style="font-size:${(this._config && this._config.soc_font_size) || 38}px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${battSoc.toFixed(1)}%</div>
       </div>
       <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:8px">
         <div style="width:${battSoc}%;height:100%;background:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};border-radius:3px;transition:width 1s ease"></div>
@@ -3220,7 +3220,7 @@ class FinallySkyCardMobile extends HTMLElement {
       <div class="hero-bottom">
         <div class="hero-soc">
           <div class="soc-lbl">TOTAAL SOC${(this._config && this._config.hide_battery_label) ? '' : ` · ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`}</div>
-          <div class="soc-getal" style="color:${socColor}">${Math.round(battSoc)}%</div>
+          <div class="soc-getal" style="color:${socColor}">${battSoc.toFixed(1)}%</div>
           <div class="soc-bar">
             <div class="soc-bar-fill" style="width:${battSoc}%;background:${socColor}"></div>
           </div>
