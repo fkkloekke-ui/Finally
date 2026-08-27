@@ -385,32 +385,49 @@ class FinallySkyCard extends HTMLElement {
   }
 
   // Past nieuw gerenderde HTML toe op de shadow DOM.
-  // Standaardgedrag (ongewijzigd, zoals altijd): directe innerHTML-vervanging.
-  // Met config-optie stable_render:true wordt dubbele buffering gebruikt: de nieuwe HTML wordt
-  // eerst buiten beeld (niet met visibility:hidden — dat laat de browser namelijk NIETS
-  // voorbereiden, layout/paint gebeurt dan pas op het moment van zichtbaar maken, wat het
-  // hele doel ondermijnt) opgebouwd, en pas zichtbaar gemaakt zodra de browser 'm daadwerkelijk
-  // heeft kunnen tekenen — de zichtbare laag wordt dus nooit leeggemaakt, geen flits meer.
-  _applyRenderedHtml(html, afterSwap) {
-    // Stijlblok (honderden regels CSS, nooit dynamisch) wordt precies ÉÉN keer neergezet.
-    // Bij elke render opnieuw meesturen dwingt de browser om de hele stylesheet opnieuw te
-    // parsen/berekenen — vermoedelijk een groot deel van de zichtbare "flits" bij elke render.
-    if (!this._styleInjected) {
-      this.shadowRoot.innerHTML = (this._styleBlock || '') + '<div id="fc-root"></div>';
-      this._styleInjected = true;
+  // Drie dingen worden precies ÉÉN keer neergezet en daarna nooit meer aangeraakt:
+  // - het CSS-stijlblok (honderden regels, nooit dynamisch)
+  // - de "schil" rond de content: .wrap/.design-canvas + de achtergrond- en bootafbeelding
+  //   (een <img> opnieuw aanmaken dwingt de browser 'm opnieuw te decoderen, ook al is de
+  //   src identiek — dat bleek de resterende bron van de zichtbare flits)
+  // Alleen het stuk tussen de FCDYN-markers (alle tegels/popups) wordt nog per render vervangen.
+  // Met stable_render:true gebeurt dat via dubbele buffering (buiten beeld opbouwen, dan pas tonen).
+  _applyRenderedHtml(html, skyImg, afterSwap) {
+    const startMarker = '<!--FCDYN_START-->';
+    const endMarker = '<!--FCDYN_END-->';
+    const startIdx = html.indexOf(startMarker);
+    const endIdx = html.indexOf(endMarker);
+    if (startIdx === -1 || endIdx === -1) {
+      // Veiligheidsnet: markers niet gevonden (bijv. door een toekomstige wijziging) —
+      // val terug op de oude, altijd-werkende volledige vervanging.
+      this.shadowRoot.innerHTML = (this._styleBlock || '') + html;
+      if (afterSwap) afterSwap();
+      return;
     }
-    const rootEl = this.shadowRoot.getElementById('fc-root');
-    if (!rootEl) { this._styleInjected = false; return this._applyRenderedHtml(html, afterSwap); }
+    const shellPrefix = html.slice(0, startIdx + startMarker.length);
+    const dynContent = html.slice(startIdx + startMarker.length, endIdx);
+    const shellSuffix = html.slice(endIdx);
+
+    if (!this._shellInjected) {
+      this.shadowRoot.innerHTML = (this._styleBlock || '')
+        + shellPrefix + '<div id="fc-dyn"></div>' + shellSuffix;
+      this._shellInjected = true;
+    }
+    const bgImg = this.shadowRoot.getElementById('fc-bg-img');
+    if (bgImg && bgImg.src !== skyImg) bgImg.src = skyImg; // alleen echt bijwerken bij verandering
+
+    const dynRoot = this.shadowRoot.getElementById('fc-dyn');
+    if (!dynRoot) { this._shellInjected = false; return this._applyRenderedHtml(html, skyImg, afterSwap); }
 
     if (!(this._config && this._config.stable_render)) {
-      rootEl.innerHTML = html;
+      dynRoot.innerHTML = dynContent;
       if (afterSwap) afterSwap();
       return;
     }
     if (!this._activeBuf) {
       // Eerste render: bouw de twee buffer-lagen op. Beide starten "on-screen"; de inactieve
       // wordt hieronder direct off-screen gezet (niet visibility:hidden).
-      rootEl.innerHTML = `
+      dynRoot.innerHTML = `
         <div id="fc-buf-a" style="position:fixed;inset:0"></div>
         <div id="fc-buf-b" style="position:fixed;top:0;left:-9999px;width:100vw;height:100vh"></div>
       `;
@@ -421,12 +438,12 @@ class FinallySkyCard extends HTMLElement {
     const showEl = this.shadowRoot.getElementById(showId);
     const hideEl = this.shadowRoot.getElementById(hideId);
     if (!showEl || !hideEl) {
-      rootEl.innerHTML = html;
+      dynRoot.innerHTML = dynContent;
       this._activeBuf = null;
       if (afterSwap) afterSwap();
       return;
     }
-    showEl.innerHTML = html; // buiten beeld (links van het canvas) opbouwen — browser rendert dit gewoon echt
+    showEl.innerHTML = dynContent; // buiten beeld (links van het canvas) opbouwen — browser rendert dit gewoon echt
     this._activeBuf = this._activeBuf === 'a' ? 'b' : 'a';
     // Dubbele rAF: geeft de browser twee volledige frames om de nieuwe inhoud daadwerkelijk
     // te tekenen voordat we 'm on-screen zetten — pas dan is de swap echt naadloos.
@@ -1558,10 +1575,10 @@ class FinallySkyCard extends HTMLElement {
   return vars.join(';');
 })()}">
  <div class="design-canvas" id="design-canvas">
-  <img class="bg" src="${skyImg}"/>
+  <img class="bg" id="fc-bg-img" src="${skyImg}"/>
   ${(this._config && this._config.bg_darken) ? `<div style="position:absolute;inset:0;z-index:1;background:rgba(0,0,10,${this._config.bg_darken});pointer-events:none"></div>` : ''}
-  <img src="${backgroundFolder}${foregroundImage}" style="position:absolute;bottom:18%;left:${(this._config && this._config.boat_left_pct) || 35}%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
-
+  <img id="fc-boat-img" src="${backgroundFolder}${foregroundImage}" style="position:absolute;bottom:18%;left:${(this._config && this._config.boat_left_pct) || 35}%;width:${(this._config && this._config.boat_size_pct) || 38}%;height:auto;pointer-events:none;z-index:4;opacity:0.95"/>
+<!--FCDYN_START-->
   <!-- Erik op SUP — alleen bij mooi weer -->
   ${(wcond === 'sunny' || wcond === 'partlycloudy') && sunAbove ? `
 
@@ -2136,10 +2153,11 @@ ${(this._config && this._config.dc_load_entity) ? `
 
 
 
+<!--FCDYN_END-->
   </div>
  </div>
 </div>`;
-    this._applyRenderedHtml(__html, () => {
+    this._applyRenderedHtml(__html, skyImg, () => {
       // Pas de 1920x1080-canvas schaal toe op het huidige schermformaat
       this._applyScale();
 
