@@ -2503,7 +2503,7 @@ ${(this._config && this._config.dc_load_entity) ? `
     }));
 
     const draw = () => {
-      if (!this.shadowRoot.getElementById('rain-canvas')) return;
+      if (this.shadowRoot.getElementById('rain-canvas') !== canvas) return; // stopt zodra dit niet meer de actuele canvas is (voorkomt opstapelende lussen)
       ctx.clearRect(0, 0, W, H);
       raindrops.forEach(d => {
         ctx.beginPath();
