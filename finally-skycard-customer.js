@@ -625,9 +625,9 @@ class FinallySkyCard extends HTMLElement {
       </div>
       <div class="sb-section">Dagstatistieken</div>
       <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:12px">
-        <div class="sb-mini"><div class="sb-mini-lbl">PV vandaag</div><div class="sb-mini-val" id="ep-pvd" style="color:#ffd700">--</div></div>
-        <div class="sb-mini"><div class="sb-mini-lbl">PV gisteren</div><div class="sb-mini-val" id="ep-pvg" style="color:#ffaa44">--</div></div>
-        <div class="sb-mini"><div class="sb-mini-lbl">PV maand</div><div class="sb-mini-val" id="ep-pvm" style="color:#ff8800">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Zonnepanelen vandaag</div><div class="sb-mini-val" id="ep-pvd" style="color:#ffd700">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Zonnepanelen gisteren</div><div class="sb-mini-val" id="ep-pvg" style="color:#ffaa44">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Zonnepanelen maand</div><div class="sb-mini-val" id="ep-pvm" style="color:#ff8800">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Walstroom dag</div><div class="sb-mini-val" id="ep-gd" style="color:#00aaff">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Verbruik dag</div><div class="sb-mini-val" id="ep-ld" style="color:#ff8844">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Verbruik maand</div><div class="sb-mini-val" id="ep-lm" style="color:#ff6622">--</div></div>
@@ -656,7 +656,7 @@ class FinallySkyCard extends HTMLElement {
         <div class="sb-card"><div class="sb-card-lbl">MPPT staat</div>
           <div class="sb-card-val" id="sp-staat" style="font-size:16px;color:#00ff88">--</div>
           <div class="sb-card-sub">SmartSolar 150/85 rev2</div></div>
-        <div class="sb-card"><div class="sb-card-lbl">PV stroom</div>
+        <div class="sb-card"><div class="sb-card-lbl">Zonnepanelen stroom</div>
           <div class="sb-card-val" id="sp-a" style="color:#ffcc44">-- A</div></div>
       </div>
       <div class="sb-section">Opbrengst</div>
@@ -1737,7 +1737,7 @@ class FinallySkyCard extends HTMLElement {
         &#9889; Limiet: ${acInputLimit} A
       </div>
       <div id="wal-socket-btn" style="margin-top:5px;cursor:pointer;background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.06)')};border:1px solid ${walSocketAan?'rgba(0,255,136,0.5)':(walStandby?'rgba(255,165,0,0.5)':'rgba(255,255,255,0.2)')};border-radius:6px;padding:5px 8px;font-size:14px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.45)')};text-align:center">
-        ${walSocketAan?'&#9679; SOCKET AAN':(walStandby?'&#9680; STANDBY (spanning aanwezig)':'&#9675; SOCKET UIT')}
+        ${walSocketAan?'&#9679; WAL AAN':(walStandby?'&#9680; WAL STANDBY':'&#9675; WAL UIT')}
       </div>
       <div id="wal-override-btn" style="margin-top:4px;cursor:pointer;background:${walOverride?'rgba(255,165,0,0.12)':'rgba(0,255,136,0.08)'};border:0.5px solid ${walOverride?'rgba(255,165,0,0.5)':'rgba(0,255,136,0.3)'};border-radius:6px;padding:4px 8px;font-size:12px;font-weight:600;color:${walOverride?'#ffaa44':'#00ff88'};text-align:center;display:flex;align-items:center;justify-content:center;gap:5px">
         <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="${walOverride?'#ffaa44':'#00ff88'}" stroke-width="2.5">${walOverride?'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>':'<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'}</svg>
@@ -1784,7 +1784,7 @@ ${(this._config && this._config.zononder_left !== undefined && this._config.zono
   <div class="pwrbars">
     <div class="pbrwrap" style="border-color:rgba(255,200,0,0.3)">
       <div class="pbr-lbl">
-        <span style="color:#ffd700;font-size:14px;font-weight:700">☀ PV</span>
+        <span style="color:#ffd700;font-size:14px;font-weight:700">☀ ZONNEPANELEN</span>
         <span style="color:#ffd700;font-size:14px;font-weight:700">${pvW} W <span style="opacity:0.5;font-weight:400">/ ${pvMax} W</span></span>
       </div>
       <div class="pbr-bar">
@@ -1793,7 +1793,7 @@ ${(this._config && this._config.zononder_left !== undefined && this._config.zono
     </div>
     <div class="pbrwrap" style="border-color:rgba(255,100,50,0.3)">
       <div class="pbr-lbl">
-        <span style="color:${loadKleur};font-size:14px;font-weight:700${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">⚡ LOAD${loadAlarm?' ⚠':''}</span>
+        <span style="color:${loadKleur};font-size:14px;font-weight:700${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">⚡ GEBRUIK NU${loadAlarm?' ⚠':''}</span>
         <span style="color:${loadKleur};font-size:14px;font-weight:700">${loadW} W <span style="opacity:0.5;font-weight:400">/ ${loadMax} W</span></span>
       </div>
       <div class="pbr-bar">
@@ -2063,7 +2063,7 @@ ${(this._config && this._config.hide_zon_onder) ? '' : `
   <div class="statsbar">
 
     <div class="stat" style="flex:${(this._config && this._config.pv_flex) || 1};border-color:rgba(255,200,0,0.2)">
-      <div class="sl">PV VANDAAG</div>
+      <div class="sl">ZONNEPANELEN VANDAAG</div>
       <div class="sv" style="color:#ffd700">${pvVandaag} kWh</div>
       <div class="ss">Maand: ${pvMaand} kWh</div>
       <div class="ss">${mpptState}</div>
@@ -3286,7 +3286,7 @@ ${(this._config && this._config.boat_below_hero) ? `
         <!-- Boot (load) -->
         <div class="flow-node" style="border:0.5px solid rgba(255,100,50,0.3)">
           <div style="font-size:18px">⚓</div>
-          <div style="font-size:10px;color:rgba(255,100,50,0.6);letter-spacing:1px;margin:2px 0">LOAD</div>
+          <div style="font-size:10px;color:rgba(255,100,50,0.6);letter-spacing:1px;margin:2px 0">GEBRUIK NU</div>
           <div style="font-size:15px;font-weight:700;color:${loadKleur}${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">${loadW}${loadAlarm?' ⚠':''} W</div>
         </div>
         <!-- Pijl boot↔accu -->
@@ -3631,7 +3631,7 @@ ${(this._config && this._config.show_kabola) ? `
         ${gridActive ? '<div style="color:#00aaff;font-size:12px;margin-bottom:4px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:12px;margin-bottom:4px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:12px;margin-bottom:4px">&#9679; OFF-GRID</div>'}
         <div style="font-size:22px;margin-bottom:4px">🔌</div>
         <div class="lbl">WALSTROOM</div>
-        <div style="font-size:20px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.3)')}">${walSocketAan?'● AAN':(walStandby?'◐ STANDBY':'○ UIT')}</div>
+        <div style="font-size:20px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.3)')}">${walSocketAan?'● WAL AAN':(walStandby?'◐ WAL STANDBY':'○ WAL UIT')}</div>
         <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">${walStandby ? 'spanning aanwezig, niet ingeschakeld' : 'tik om te schakelen'}</div>
       </div>
       <div class="touch-btn" id="m-wal-override-btn"
@@ -3862,7 +3862,7 @@ ${(this._config && this._config.show_generator) ? `
           <div style="font-size:22px;font-weight:800;color:#ffd700">${pvW} W</div>
         </div>
         <div style="background:rgba(255,100,50,0.08);border:0.5px solid rgba(255,100,50,0.2);border-radius:12px;padding:12px;text-align:center">
-          <div style="font-size:10px;color:rgba(255,100,50,0.5);letter-spacing:1px">LOAD NU</div>
+          <div style="font-size:10px;color:rgba(255,100,50,0.5);letter-spacing:1px">GEBRUIK NU</div>
           <div style="font-size:22px;font-weight:800;color:${loadKleur}${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">${loadAlarm?'⚠ ':''}${loadW} W</div>
         </div>
         <div style="background:rgba(0,170,255,0.08);border:0.5px solid rgba(0,170,255,0.2);border-radius:12px;padding:12px;text-align:center">
