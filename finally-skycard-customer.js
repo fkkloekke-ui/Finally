@@ -1784,8 +1784,8 @@ ${(this._config && this._config.zononder_left !== undefined && this._config.zono
   <div class="pwrbars">
     <div class="pbrwrap" style="border-color:rgba(255,200,0,0.3)">
       <div class="pbr-lbl">
-        <span style="color:#ffd700;font-size:14px;font-weight:700">☀ ZONNEPANELEN</span>
-        <span style="color:#ffd700;font-size:14px;font-weight:700">${pvW} W <span style="opacity:0.5;font-weight:400">/ ${pvMax} W</span></span>
+        <span style="color:#ffd700;font-size:12px;font-weight:700;white-space:nowrap">☀ ZONNEPANELEN</span>
+        <span style="color:#ffd700;font-size:14px;font-weight:700;white-space:nowrap">${pvW} W <span style="opacity:0.5;font-weight:400">/ ${pvMax} W</span></span>
       </div>
       <div class="pbr-bar">
         <div class="pbr-fill" style="width:${pvPct.toFixed(1)}%;background:linear-gradient(90deg,#ff8800,#ffd700)"></div>
@@ -1793,8 +1793,8 @@ ${(this._config && this._config.zononder_left !== undefined && this._config.zono
     </div>
     <div class="pbrwrap" style="border-color:rgba(255,100,50,0.3)">
       <div class="pbr-lbl">
-        <span style="color:${loadKleur};font-size:14px;font-weight:700${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">⚡ GEBRUIK NU${loadAlarm?' ⚠':''}</span>
-        <span style="color:${loadKleur};font-size:14px;font-weight:700">${loadW} W <span style="opacity:0.5;font-weight:400">/ ${loadMax} W</span></span>
+        <span style="color:${loadKleur};font-size:12px;font-weight:700;white-space:nowrap${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">⚡ GEBRUIK NU${loadAlarm?' ⚠':''}</span>
+        <span style="color:${loadKleur};font-size:14px;font-weight:700;white-space:nowrap">${loadW} W <span style="opacity:0.5;font-weight:400">/ ${loadMax} W</span></span>
       </div>
       <div class="pbr-bar">
         <div class="pbr-fill" style="width:${loadPct.toFixed(1)}%;background:${loadAlarm?'linear-gradient(90deg,#cc0000,#ff2222)':'linear-gradient(90deg,#ff4400,#ff8844)'}"></div>
