@@ -1535,7 +1535,7 @@ class FinallySkyCard extends HTMLElement {
   .batt-detail { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.2); border-radius: 10px; padding: 8px 12px; font-size: 15px; }
 
   .pwrbars { position: absolute; left: 50%; bottom: var(--pwrbars-bottom, 9%); transform: translateX(-50%); z-index: 10; display: flex; flex-direction: row; gap: 100px; }
-  .pbrwrap { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.2); border-radius: 10px; padding: 9px 16px; width: 280px; }
+  .pbrwrap { background: rgba(4,14,44,0.22); backdrop-filter: blur(10px); border: 0.5px solid rgba(100,170,255,0.2); border-radius: 10px; padding: 9px 16px; width: 320px; }
   .pbr-lbl { font-size: 12px; color: var(--lbl-mid); letter-spacing: 1px; margin-bottom: 6px; display: flex; justify-content: space-between; }
   .pbr-bar { height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden; }
   .pbr-fill { height: 100%; border-radius: 5px; transition: width 1s ease; }
