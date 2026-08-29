@@ -1,9 +1,15 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.9.1
+   Versie: 3.9.2
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.9.2 — WALSTROOM-tegel (kiosk): alle tekst/iconen fors vergroot
+   (koptekst 13-22px -> 15-26px, knop-iconen 14px -> 19px, knop-labels
+   8-9px -> 11-12px, knop-waarden 11px -> 16px) en knophoogte 56px -> 74px,
+   op verzoek omdat de vorige compacte rij-van-4 niet goed leesbaar was.
+   Geen functionele wijzigingen.
 
    v3.9.1 — Fix op v3.8.10/v3.9.0: de 2x2-grid van vierkante WALSTROOM-knoppen
    werd bij een tegel op volle (accu-paneel-)breedte bijna net zo hoog als
@@ -1740,28 +1746,28 @@ class FinallySkyCard extends HTMLElement {
   <!-- GRID label linksboven bij mast -->
   <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top ${(this._config && this._config.walstroom_right !== undefined) ? 'right' : 'left'};` : ''}${(this._config && this._config.walstroom_right !== undefined) ? `right:${this._config.walstroom_right}px;left:auto;` : ''}${(this._config && this._config.walstroom_top !== undefined) ? `top:${this._config.walstroom_top}px;` : ''}">
     <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'};${(this._config && this._config.walstroom_width) ? `min-width:${this._config.walstroom_width}px;` : ''}">
-      <div class="lbl" style="letter-spacing:2px;font-size:13px">WALSTROOM</div>
-      <div style="font-size:22px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
+      <div class="lbl" style="letter-spacing:2px;font-size:15px">WALSTROOM</div>
+      <div style="font-size:26px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
         ${gridActive ? gridW+' W' : gridSpanning ? acInV+' V' : 'OFF-GRID'}
       </div>
-      ${gridActive ? '<div class="sub" style="color:#00aaff;font-size:14px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:14px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:14px">&#9679; OFF-GRID</div>'}
-      <div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:5px">
-        <div id="wal-limit-btn" data-action="wal-limit" style="cursor:pointer;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:8px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:rgba(255,255,255,0.95)">
-          <span style="font-size:14px;line-height:1">&#9889;</span>
-          <span style="font-size:9px;font-weight:600;letter-spacing:0.3px">LIMIET</span>
-          <span style="font-size:11px;font-weight:800">${acInputLimit} A</span>
+      ${gridActive ? '<div class="sub" style="color:#00aaff;font-size:16px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:16px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:16px">&#9679; OFF-GRID</div>'}
+      <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
+        <div id="wal-limit-btn" data-action="wal-limit" style="cursor:pointer;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:9px;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(255,255,255,0.95)">
+          <span style="font-size:19px;line-height:1">&#9889;</span>
+          <span style="font-size:12px;font-weight:600;letter-spacing:0.3px">LIMIET</span>
+          <span style="font-size:16px;font-weight:800">${acInputLimit} A</span>
         </div>
-        <div id="wal-socket-btn" style="cursor:pointer;background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.06)')};border:1px solid ${walSocketAan?'rgba(0,255,136,0.5)':(walStandby?'rgba(255,165,0,0.5)':'rgba(255,255,255,0.2)')};border-radius:8px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:2px;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.45)')}">
-          <span style="font-size:14px;line-height:1">${walSocketAan?'&#9679;':(walStandby?'&#9680;':'&#9675;')}</span>
-          <span style="font-size:8px;font-weight:700;text-align:center;line-height:1.15">${walSocketAan?'WAL AAN':(walStandby?'STANDBY':'WAL UIT')}</span>
+        <div id="wal-socket-btn" style="cursor:pointer;background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.06)')};border:1px solid ${walSocketAan?'rgba(0,255,136,0.5)':(walStandby?'rgba(255,165,0,0.5)':'rgba(255,255,255,0.2)')};border-radius:9px;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:2px;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.45)')}">
+          <span style="font-size:19px;line-height:1">${walSocketAan?'&#9679;':(walStandby?'&#9680;':'&#9675;')}</span>
+          <span style="font-size:11px;font-weight:700;text-align:center;line-height:1.15">${walSocketAan?'WAL AAN':(walStandby?'STANDBY':'WAL UIT')}</span>
         </div>
-        <div id="wal-override-btn" style="cursor:pointer;background:${walOverride?'rgba(255,165,0,0.12)':'rgba(0,255,136,0.08)'};border:0.5px solid ${walOverride?'rgba(255,165,0,0.5)':'rgba(0,255,136,0.3)'};border-radius:8px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:${walOverride?'#ffaa44':'#00ff88'}">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="${walOverride?'#ffaa44':'#00ff88'}" stroke-width="2.5">${walOverride?'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>':'<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'}</svg>
-          <span style="font-size:9px;font-weight:600">${walOverride?'HANDM.':'AUTO'}</span>
+        <div id="wal-override-btn" style="cursor:pointer;background:${walOverride?'rgba(255,165,0,0.12)':'rgba(0,255,136,0.08)'};border:0.5px solid ${walOverride?'rgba(255,165,0,0.5)':'rgba(0,255,136,0.3)'};border-radius:9px;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:${walOverride?'#ffaa44':'#00ff88'}">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="${walOverride?'#ffaa44':'#00ff88'}" stroke-width="2.5">${walOverride?'<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>':'<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>'}</svg>
+          <span style="font-size:12px;font-weight:600">${walOverride?'HANDM.':'AUTO'}</span>
         </div>
-        <div id="wal-instellingen-btn" style="cursor:pointer;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:8px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:rgba(255,255,255,0.95)">
-          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-          <span style="font-size:8px;font-weight:600;text-align:center;line-height:1.05">INSTEL.</span>
+        <div id="wal-instellingen-btn" style="cursor:pointer;background:rgba(255,255,255,0.04);border:0.5px solid rgba(255,255,255,0.12);border-radius:9px;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(255,255,255,0.95)">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span style="font-size:11px;font-weight:600;text-align:center;line-height:1.05">INSTEL.</span>
         </div>
       </div>
     </div>
