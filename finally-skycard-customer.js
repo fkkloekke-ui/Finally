@@ -2811,7 +2811,7 @@ class FinallySkyCardMobile extends HTMLElement {
     const walMaand   = s(walstroomVerbruikMaandEntity).toFixed(2);
     const walKosten  = (parseFloat(walMaand) * _kwhPrijsM).toFixed(2);
     const loadDagEntity = (this._config && this._config.load_dag_entity) || 'sensor.gx_device_ac_uitgang_dagverbruik';
-    const loadMaandEntity = (this._config && this._config.load_maand_entity) || 'sensor.gx_device_quattro_uitgang_maandoverzicht';
+    const loadMaandEntity = (this._config && (this._config.load_aan_boord_maand_entity || this._config.load_maand_entity)) || 'sensor.gx_device_quattro_uitgang_maandoverzicht';
     const loadDag    = s(loadDagEntity).toFixed(2);
     const loadMaand  = s(loadMaandEntity).toFixed(1);
     const acInputLimit = s('number.gx_device_ac_input_limit').toFixed(0);
