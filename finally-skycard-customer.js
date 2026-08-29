@@ -1,9 +1,20 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.9.2
+   Versie: 3.9.3
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.9.3 — Toegankelijkheid WALSTROOM-tegel (kiosk), op verzoek voor een
+   slechtziende gebruiker: koptekst nog verder vergroot (17-30px), en alle
+   tekst/knoppen in de WALSTROOM-instellingenpopup en de bevestigingspopups
+   (walstroom/generator inschakelen) fors vergroot (11-15px -> 14-19px,
+   +/- knoppen 44px -> 56px, waardes 32px -> 40px). Ook: AUTO->HANDMATIG
+   vraagt nu eerst bevestiging ("Weet je zeker dat je AUTO wilt
+   uitschakelen?") — voorkomt dat een dubbelklik (door vertraging in de
+   statusupdate) de actie meteen weer terugdraait. HANDMATIG->AUTO blijft
+   direct werken, geen bevestiging nodig. Alleen kiosk-view; mobiel
+   ongewijzigd.
 
    v3.9.2 — WALSTROOM-tegel (kiosk): alle tekst/iconen fors vergroot
    (koptekst 13-22px -> 15-26px, knop-iconen 14px -> 19px, knop-labels
@@ -1746,11 +1757,11 @@ class FinallySkyCard extends HTMLElement {
   <!-- GRID label linksboven bij mast -->
   <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top ${(this._config && this._config.walstroom_right !== undefined) ? 'right' : 'left'};` : ''}${(this._config && this._config.walstroom_right !== undefined) ? `right:${this._config.walstroom_right}px;left:auto;` : ''}${(this._config && this._config.walstroom_top !== undefined) ? `top:${this._config.walstroom_top}px;` : ''}">
     <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'};${(this._config && this._config.walstroom_width) ? `min-width:${this._config.walstroom_width}px;` : ''}">
-      <div class="lbl" style="letter-spacing:2px;font-size:15px">WALSTROOM</div>
-      <div style="font-size:26px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
+      <div class="lbl" style="letter-spacing:2px;font-size:17px">WALSTROOM</div>
+      <div style="font-size:30px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
         ${gridActive ? gridW+' W' : gridSpanning ? acInV+' V' : 'OFF-GRID'}
       </div>
-      ${gridActive ? '<div class="sub" style="color:#00aaff;font-size:16px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:16px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:16px">&#9679; OFF-GRID</div>'}
+      ${gridActive ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; OFF-GRID</div>'}
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px">
         <div id="wal-limit-btn" data-action="wal-limit" style="cursor:pointer;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:9px;height:74px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;color:rgba(255,255,255,0.95)">
           <span style="font-size:19px;line-height:1">&#9889;</span>
@@ -1950,108 +1961,119 @@ ${(this._config && this._config.hide_zon_onder) ? '' : `
   <!-- WALSTROOM INSTELLINGEN POPUP -->
   <div id="wal-inst-popup" style="display:none;position:fixed;inset:0;z-index:102;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(100,170,255,0.35);border-radius:20px;padding:32px 40px;min-width:360px;max-height:88vh;overflow-y:auto;-webkit-overflow-scrolling:touch;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">WALSTROOM INSTELLINGEN</div>
+      <div style="font-size:17px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">WALSTROOM INSTELLINGEN</div>
 
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">SOCKET AAN ONDER</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">SOCKET AAN ONDER</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-soc-aan-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-soc-aan-val" style="font-size:32px;font-weight:800;color:#ff9900">--%</div></div>
-          <div id="wi-soc-aan-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-soc-aan-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-soc-aan-val" style="font-size:40px;font-weight:800;color:#ff9900">--%</div></div>
+          <div id="wi-soc-aan-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">SOCKET UIT BOVEN</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">SOCKET UIT BOVEN</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-soc-uit-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-soc-uit-val" style="font-size:32px;font-weight:800;color:#00cc66">--%</div></div>
-          <div id="wi-soc-uit-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-soc-uit-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-soc-uit-val" style="font-size:40px;font-weight:800;color:#00cc66">--%</div></div>
+          <div id="wi-soc-uit-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:28px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">ZON DREMPEL (UIT BIJ MEER ZON)</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">ZON DREMPEL (UIT BIJ MEER ZON)</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-zon-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-zon-val" style="font-size:32px;font-weight:800;color:#ffd700">-- W</div></div>
-          <div id="wi-zon-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-zon-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-zon-val" style="font-size:40px;font-weight:800;color:#ffd700">-- W</div></div>
+          <div id="wi-zon-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       ${(this._config && this._config.walstroom_kwh_prijs_entity) ? `
       <div style="margin-bottom:28px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">STROOMPRIJS (PER KWH)</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">STROOMPRIJS (PER KWH)</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-prijs-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-prijs-val" style="font-size:32px;font-weight:800;color:#66ccff">-- €</div></div>
-          <div id="wi-prijs-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-prijs-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-prijs-val" style="font-size:40px;font-weight:800;color:#66ccff">-- €</div></div>
+          <div id="wi-prijs-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
       ` : ''}
 
       <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:20px;margin-bottom:8px">
-        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:16px">OVERBELASTING</div>
+        <div style="font-size:15px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:16px">OVERBELASTING</div>
       </div>
 
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN BOVEN</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN BOVEN</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-ovl-aan-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-ovl-aan-val" style="font-size:32px;font-weight:800;color:#ff4444">-- W</div></div>
-          <div id="wi-ovl-aan-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-ovl-aan-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-aan-val" style="font-size:40px;font-weight:800;color:#ff4444">-- W</div></div>
+          <div id="wi-ovl-aan-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN NA</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN NA</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-ovl-aanduur-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-ovl-aanduur-val" style="font-size:32px;font-weight:800;color:#ff8844">-- s</div></div>
-          <div id="wi-ovl-aanduur-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-ovl-aanduur-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-aanduur-val" style="font-size:40px;font-weight:800;color:#ff8844">-- s</div></div>
+          <div id="wi-ovl-aanduur-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:20px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT ONDER</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT ONDER</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-ovl-uit-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-ovl-uit-val" style="font-size:32px;font-weight:800;color:#00cc66">-- W</div></div>
-          <div id="wi-ovl-uit-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-ovl-uit-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-uit-val" style="font-size:40px;font-weight:800;color:#00cc66">-- W</div></div>
+          <div id="wi-ovl-uit-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:28px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT NA</div>
+        <div style="font-size:15px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT NA</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:16px">
-          <div id="wi-ovl-uitduur-min" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">−</div>
-          <div style="min-width:80px"><div id="wi-ovl-uitduur-val" style="font-size:32px;font-weight:800;color:#66ccff">-- s</div></div>
-          <div id="wi-ovl-uitduur-plus" style="cursor:pointer;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div>
+          <div id="wi-ovl-uitduur-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div style="min-width:80px"><div id="wi-ovl-uitduur-val" style="font-size:40px;font-weight:800;color:#66ccff">-- s</div></div>
+          <div id="wi-ovl-uitduur-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
-      <div id="wi-sluit" style="cursor:pointer;padding:12px 40px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95);display:inline-block">Sluiten</div>
+      <div id="wi-sluit" style="cursor:pointer;padding:16px 44px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:19px;color:rgba(255,255,255,0.95);display:inline-block">Sluiten</div>
+    </div>
+  </div>
+
+  <div id="wal-override-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,153,0,0.45);border-radius:20px;padding:32px 40px;min-width:340px;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+      <div style="font-size:17px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">AUTO UITSCHAKELEN</div>
+      <div style="font-size:19px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je AUTO<br>wilt uitschakelen?</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <div id="wal-override-confirm-nee" style="cursor:pointer;padding:16px 32px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:19px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="wal-override-confirm-ja" style="cursor:pointer;padding:16px 32px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:19px;color:#ffaa33;font-weight:700">Ja, uitschakelen</div>
+      </div>
     </div>
   </div>
 
   <div id="wal-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,153,0,0.45);border-radius:20px;padding:32px 40px;min-width:340px;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">WALSTROOM INSCHAKELEN</div>
-      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je walstroom<br>handmatig wilt inschakelen?</div>
+      <div style="font-size:17px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">WALSTROOM INSCHAKELEN</div>
+      <div style="font-size:19px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je walstroom<br>handmatig wilt inschakelen?</div>
       <div style="display:flex;gap:12px;justify-content:center">
-        <div id="wal-confirm-nee" style="cursor:pointer;padding:12px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95)">Annuleren</div>
-        <div id="wal-confirm-ja" style="cursor:pointer;padding:12px 28px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:15px;color:#ffaa33;font-weight:700">Ja, inschakelen</div>
+        <div id="wal-confirm-nee" style="cursor:pointer;padding:16px 32px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:19px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="wal-confirm-ja" style="cursor:pointer;padding:16px 32px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:19px;color:#ffaa33;font-weight:700">Ja, inschakelen</div>
       </div>
     </div>
   </div>
 
   <div id="gen-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,90,60,0.5);border-radius:20px;padding:32px 40px;min-width:340px;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">GENERATOR STARTEN</div>
-      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je de generator<br>handmatig wilt starten?</div>
+      <div style="font-size:17px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">GENERATOR STARTEN</div>
+      <div style="font-size:19px;color:rgba(255,255,255,0.95);margin-bottom:28px;line-height:1.5">Weet je zeker dat je de generator<br>handmatig wilt starten?</div>
       <div style="display:flex;gap:12px;justify-content:center">
-        <div id="gen-confirm-nee" style="cursor:pointer;padding:12px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95)">Annuleren</div>
-        <div id="gen-confirm-ja" style="cursor:pointer;padding:12px 28px;background:rgba(255,90,60,0.2);border:0.5px solid rgba(255,90,60,0.55);border-radius:12px;font-size:15px;color:#ff8866;font-weight:700">Ja, starten</div>
+        <div id="gen-confirm-nee" style="cursor:pointer;padding:16px 32px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:19px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="gen-confirm-ja" style="cursor:pointer;padding:16px 32px;background:rgba(255,90,60,0.2);border:0.5px solid rgba(255,90,60,0.55);border-radius:12px;font-size:19px;color:#ff8866;font-weight:700">Ja, starten</div>
       </div>
     </div>
   </div>
@@ -2297,14 +2319,34 @@ ${(this._config && this._config.dc_load_entity) ? `
 
     // Walstroom override knop (configureerbaar, valt terug op Eriks eigen helper)
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
+    const walOverrideConfirmPopup = this.shadowRoot.getElementById('wal-override-confirm-popup');
+    const walOverrideConfirmJa = this.shadowRoot.getElementById('wal-override-confirm-ja');
+    const walOverrideConfirmNee = this.shadowRoot.getElementById('wal-override-confirm-nee');
+    if (walOverrideConfirmPopup) {
+      if (this._walOverrideConfirmPopupOpen) walOverrideConfirmPopup.style.display = 'flex';
+      const sluitOverrideConfirm = () => { this._walOverrideConfirmPopupOpen = false; walOverrideConfirmPopup.style.display = 'none'; };
+      if (walOverrideConfirmNee) walOverrideConfirmNee.onclick = (e) => { e.stopPropagation(); sluitOverrideConfirm(); };
+      walOverrideConfirmPopup.onclick = (e) => { if (e.target === walOverrideConfirmPopup) sluitOverrideConfirm(); };
+      if (walOverrideConfirmJa) walOverrideConfirmJa.onclick = (e) => {
+        e.stopPropagation();
+        if (this._hass) this._hass.callService('input_boolean', 'turn_on', { entity_id: walstroomOverrideEntity });
+        sluitOverrideConfirm();
+      };
+    }
     const walOverrideBtn = this.shadowRoot.getElementById('wal-override-btn');
     if (walOverrideBtn && this._hass) {
       walOverrideBtn.onclick = (e) => {
         e.stopPropagation();
         const aan = this._hass.states[walstroomOverrideEntity]?.state === 'on';
-        this._hass.callService('input_boolean', aan ? 'turn_off' : 'turn_on', {
-          entity_id: walstroomOverrideEntity
-        });
+        if (aan) {
+          // Terug naar AUTO mag direct, geen bevestiging nodig
+          this._hass.callService('input_boolean', 'turn_off', { entity_id: walstroomOverrideEntity });
+        } else {
+          // AUTO uitschakelen: eerst bevestiging vragen — voorkomt dat een dubbelklik
+          // (door de vertraging in de statusupdate) de actie meteen weer terugdraait
+          this._walOverrideConfirmPopupOpen = true;
+          if (walOverrideConfirmPopup) walOverrideConfirmPopup.style.display = 'flex';
+        }
       };
     }
 
