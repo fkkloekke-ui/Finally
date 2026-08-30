@@ -1,9 +1,18 @@
 /* ============================================================
    Finally Card — Gebundeld bestand voor HACS
-   Versie: 3.9.4
+   Versie: 3.9.5
    Bevat: FinallySkyCard, FinallySkyCardMobile, FinallyWizard
    Dit bestand wordt door HACS als enige resource gedownload;
    alle drie de custom elements worden hierin geregistreerd.
+
+   v3.9.5 — WALSTROOM-sectie mobiel gelijkgetrokken met kiosk: status-header
+   (WALSTROOM/waarde/AAN-status) boven een 2x2-grid van 4 knoppen (Limiet,
+   Wal, Auto/Handmatig, Instellingen) i.p.v. de oude mix van een 2-koppige
+   grid + losse instellingen-balk + losse limiet-kaart. AUTO->HANDMATIG
+   vraagt nu ook op mobiel eerst bevestiging, net als kiosk. Alle
+   mobiele walstroom/generator-popups (instellingen, limiet, bevestigingen)
+   naar dezelfde grotere lettergrootte/knopmaat als kiosk. Geen wijzigingen
+   aan entity's of functionaliteit, alleen layout or aansluiting bij kiosk.
 
    v3.9.4 — WALSTROOM-tegel (kiosk): knoppen terug naar een 2x2-indeling
    (was rij van 4), maar nu met een vaste hoogte (96px) i.p.v. aspect-ratio:1
@@ -3689,45 +3698,41 @@ ${(this._config && this._config.show_kabola) ? `
     </div>
   </div>
 
-  <!-- ══ WALSTROOM LIMIET ══ -->
+  <!-- ══ WALSTROOM ══ -->
   <div class="section">
     <div class="section-title">Walstroom</div>
 
-    <!-- Socket schakelaar -->
-    <div class="card-grid" style="margin-bottom:8px">
+    <!-- Status header, zelfde als kiosk -->
+    <div class="card" style="text-align:center;border-color:rgba(100,170,255,0.25);margin-bottom:8px">
+      <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.6)">WALSTROOM</div>
+      <div style="font-size:26px;font-weight:800;color:${gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)'}">
+        ${gridActive ? gridW+' W' : (gridSpanning||walStandby) ? acInV+' V' : 'OFF-GRID'}
+      </div>
+      ${gridActive ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:13px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:13px">&#9679; OFF-GRID</div>'}
+    </div>
+
+    <!-- 4 knoppen: Limiet, Wal, Auto/Handmatig, Instellingen — zelfde indeling als kiosk -->
+    <div class="card-grid">
+      <div class="touch-btn" id="m-wal-limit-tegel" style="cursor:pointer;border-color:rgba(0,170,255,0.25);background:rgba(0,20,40,0.35)">
+        <div style="font-size:22px;margin-bottom:4px">⚡</div>
+        <div class="lbl">LIMIET</div>
+        <div style="font-size:18px;font-weight:800;color:#00aaff">${acInputLimit} A</div>
+      </div>
       <div class="touch-btn" id="m-wal-socket-btn"
            style="border-color:rgba(${walSocketAan?'0,255,136':(walStandby?'255,165,0':'255,255,255')},${walSocketAan?'0.5':(walStandby?'0.5':'0.2')});background:${walSocketAan?'rgba(0,255,136,0.12)':(walStandby?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.04)')}">
-        <div style="font-size:16px;font-weight:800;color:${gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)'}">
-          ${gridActive ? gridW+' W' : (gridSpanning||walStandby) ? acInV+' V' : 'OFF-GRID'}
-        </div>
-        ${gridActive ? '<div style="color:#00aaff;font-size:12px;margin-bottom:4px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:12px;margin-bottom:4px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:12px;margin-bottom:4px">&#9679; OFF-GRID</div>'}
-        <div style="font-size:22px;margin-bottom:4px">🔌</div>
-        <div class="lbl">WALSTROOM</div>
-        <div style="font-size:20px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.3)')}">${walSocketAan?'● WAL AAN':(walStandby?'◐ WAL STANDBY':'○ WAL UIT')}</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.95);margin-top:4px">${walStandby ? 'spanning aanwezig, niet ingeschakeld' : 'tik om te schakelen'}</div>
+        <div style="font-size:22px;margin-bottom:4px">${walSocketAan?'&#9679;':(walStandby?'&#9680;':'&#9675;')}</div>
+        <div class="lbl">WAL</div>
+        <div style="font-size:16px;font-weight:700;color:${walSocketAan?'#00ff88':(walStandby?'#ffa500':'rgba(255,255,255,0.3)')}">${walSocketAan?'AAN':(walStandby?'STANDBY':'UIT')}</div>
       </div>
       <div class="touch-btn" id="m-wal-override-btn"
            style="border-color:rgba(255,165,0,${walOverride?'0.5':'0.2'});background:${walOverride?'rgba(255,165,0,0.12)':'rgba(255,255,255,0.04)'}">
         <div style="font-size:22px;margin-bottom:4px">${walOverride?'🔒':'🤖'}</div>
         <div class="lbl">${walOverride?'HANDMATIG':'AUTO'}</div>
-        <div style="font-size:12px;color:${walOverride?'#ffaa44':'rgba(255,255,255,0.3)'};font-weight:700">${walOverride?'tik voor auto':'tik voor handmatig'}</div>
       </div>
-    </div>
-
-    <!-- Instellingen knop -->
-    <div class="touch-btn" id="m-wal-inst-btn" style="margin-bottom:8px;border-color:rgba(255,255,255,0.95);background:rgba(255,255,255,0.03);text-align:center;padding:10px 16px">
-      <span style="font-size:14px;color:rgba(255,255,255,0.95)">&#9881; Drempelwaarden instellen</span>
-    </div>
-
-    <div class="card" id="m-wal-limit-tegel" style="cursor:pointer;border-color:rgba(0,170,255,0.25);background:rgba(0,20,40,0.35)">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-size:11px;color:rgba(0,170,255,0.5);letter-spacing:1px">STROOMLIMIET</div>
-          <div style="font-size:28px;font-weight:800;color:#00aaff">${acInputLimit} A</div>
-        </div>
-        <div style="font-size:32px;color:rgba(0,170,255,0.3)">⚡</div>
+      <div class="touch-btn" id="m-wal-inst-btn" style="border-color:rgba(255,255,255,0.3);background:rgba(255,255,255,0.03)">
+        <div style="font-size:22px;margin-bottom:4px">⚙️</div>
+        <div class="lbl">INSTEL.</div>
       </div>
-      <div style="font-size:11px;color:rgba(255,255,255,0.95);text-align:center;margin-top:8px">tik om in te stellen ›</div>
     </div>
   </div>
 
@@ -3771,83 +3776,83 @@ ${(this._config && this._config.show_generator) ? `
   <!-- WALSTROOM INSTELLINGEN POPUP -->
   <div id="m-wal-inst-popup" style="display:none;position:fixed;inset:0;z-index:102;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(100,170,255,0.35);border-radius:20px;padding:28px;width:min(340px,88vw);max-height:85vh;overflow-y:auto;-webkit-overflow-scrolling:touch;text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">WALSTROOM INSTELLINGEN</div>
+      <div style="font-size:15px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">WALSTROOM INSTELLINGEN</div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">WALSTROOM AAN ONDER</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">WALSTROOM AAN ONDER</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-soc-aan-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-soc-aan-val" style="font-size:32px;font-weight:800;color:#ff9900;min-width:70px">--%</div>
-          <div id="m-wi-soc-aan-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-soc-aan-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-soc-aan-val" style="font-size:38px;font-weight:800;color:#ff9900;min-width:70px">--%</div>
+          <div id="m-wi-soc-aan-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">WALSTROOM UIT BOVEN</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">WALSTROOM UIT BOVEN</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-soc-uit-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-soc-uit-val" style="font-size:32px;font-weight:800;color:#00cc66;min-width:70px">--%</div>
-          <div id="m-wi-soc-uit-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-soc-uit-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-soc-uit-val" style="font-size:38px;font-weight:800;color:#00cc66;min-width:70px">--%</div>
+          <div id="m-wi-soc-uit-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:24px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">ZON DREMPEL (UIT BIJ MEER ZON)</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">ZON DREMPEL (UIT BIJ MEER ZON)</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-zon-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-zon-val" style="font-size:32px;font-weight:800;color:#ffd700;min-width:70px">-- W</div>
-          <div id="m-wi-zon-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-zon-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-zon-val" style="font-size:38px;font-weight:800;color:#ffd700;min-width:70px">-- W</div>
+          <div id="m-wi-zon-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       ${(this._config && this._config.walstroom_kwh_prijs_entity) ? `
       <div style="margin-bottom:24px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">STROOMPRIJS (PER KWH)</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">STROOMPRIJS (PER KWH)</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-prijs-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-prijs-val" style="font-size:32px;font-weight:800;color:#66ccff;min-width:70px">-- €</div>
-          <div id="m-wi-prijs-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-prijs-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-prijs-val" style="font-size:38px;font-weight:800;color:#66ccff;min-width:70px">-- €</div>
+          <div id="m-wi-prijs-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
       ` : ''}
 
       <div style="border-top:1px solid rgba(255,255,255,0.12);padding-top:18px;margin-bottom:8px">
-        <div style="font-size:11px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:14px">OVERBELASTING</div>
+        <div style="font-size:14px;letter-spacing:2px;color:rgba(255,120,120,0.9);margin-bottom:14px">OVERBELASTING</div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN BOVEN</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN BOVEN</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-ovl-aan-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-ovl-aan-val" style="font-size:32px;font-weight:800;color:#ff4444;min-width:70px">-- W</div>
-          <div id="m-wi-ovl-aan-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-ovl-aan-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-ovl-aan-val" style="font-size:38px;font-weight:800;color:#ff4444;min-width:70px">-- W</div>
+          <div id="m-wi-ovl-aan-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN NA</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">AAN NA</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-ovl-aanduur-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-ovl-aanduur-val" style="font-size:32px;font-weight:800;color:#ff8844;min-width:70px">-- s</div>
-          <div id="m-wi-ovl-aanduur-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-ovl-aanduur-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-ovl-aanduur-val" style="font-size:38px;font-weight:800;color:#ff8844;min-width:70px">-- s</div>
+          <div id="m-wi-ovl-aanduur-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT ONDER</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT ONDER</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-ovl-uit-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-ovl-uit-val" style="font-size:32px;font-weight:800;color:#00cc66;min-width:70px">-- W</div>
-          <div id="m-wi-ovl-uit-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-ovl-uit-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-ovl-uit-val" style="font-size:38px;font-weight:800;color:#00cc66;min-width:70px">-- W</div>
+          <div id="m-wi-ovl-uit-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:24px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT NA</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">UIT NA</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-wi-ovl-uitduur-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-wi-ovl-uitduur-val" style="font-size:32px;font-weight:800;color:#66ccff;min-width:70px">-- s</div>
-          <div id="m-wi-ovl-uitduur-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-wi-ovl-uitduur-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-wi-ovl-uitduur-val" style="font-size:38px;font-weight:800;color:#66ccff;min-width:70px">-- s</div>
+          <div id="m-wi-ovl-uitduur-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
@@ -3860,20 +3865,20 @@ ${(this._config && this._config.show_generator) ? `
       <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:20px">DIESELKOSTEN INSTELLEN</div>
 
       <div style="margin-bottom:18px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">VERBRUIK (LITER PER UUR)</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">VERBRUIK (LITER PER UUR)</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-gk-verbr-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-gk-verbr-val" style="font-size:32px;font-weight:800;color:#ffcc44;min-width:90px">-- L/u</div>
-          <div id="m-gk-verbr-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-gk-verbr-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-gk-verbr-val" style="font-size:38px;font-weight:800;color:#ffcc44;min-width:90px">-- L/u</div>
+          <div id="m-gk-verbr-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
       <div style="margin-bottom:24px">
-        <div style="font-size:11px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">DIESELPRIJS (PER LITER)</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.95);letter-spacing:1px;margin-bottom:8px">DIESELPRIJS (PER LITER)</div>
         <div style="display:flex;align-items:center;justify-content:center;gap:20px">
-          <div id="m-gk-prijs-min" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">−</div>
-          <div id="m-gk-prijs-val" style="font-size:32px;font-weight:800;color:#ffd700;min-width:90px">€ --</div>
-          <div id="m-gk-prijs-plus" style="cursor:pointer;width:48px;height:48px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:700">+</div>
+          <div id="m-gk-prijs-min" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">−</div>
+          <div id="m-gk-prijs-val" style="font-size:38px;font-weight:800;color:#ffd700;min-width:90px">€ --</div>
+          <div id="m-gk-prijs-plus" style="cursor:pointer;width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:700">+</div>
         </div>
       </div>
 
@@ -3883,24 +3888,35 @@ ${(this._config && this._config.show_generator) ? `
     </div>
   </div>
 
+  <div id="m-wal-override-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
+    <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,153,0,0.45);border-radius:20px;padding:28px;width:min(320px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
+      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">AUTO UITSCHAKELEN</div>
+      <div style="font-size:18px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je AUTO<br>wilt uitschakelen?</div>
+      <div style="display:flex;gap:12px;justify-content:center">
+        <div id="m-wal-override-confirm-nee" style="cursor:pointer;padding:15px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:18px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="m-wal-override-confirm-ja" style="cursor:pointer;padding:15px 28px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:18px;color:#ffaa33;font-weight:700">Ja, uitschakelen</div>
+      </div>
+    </div>
+  </div>
+
   <div id="m-wal-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,153,0,0.45);border-radius:20px;padding:28px;width:min(320px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">WALSTROOM INSCHAKELEN</div>
-      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je walstroom<br>handmatig wilt inschakelen?</div>
+      <div style="font-size:15px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">WALSTROOM INSCHAKELEN</div>
+      <div style="font-size:18px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je walstroom<br>handmatig wilt inschakelen?</div>
       <div style="display:flex;gap:12px;justify-content:center">
-        <div id="m-wal-confirm-nee" style="cursor:pointer;padding:12px 24px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:14px;color:rgba(255,255,255,0.95)">Annuleren</div>
-        <div id="m-wal-confirm-ja" style="cursor:pointer;padding:12px 24px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:14px;color:#ffaa33;font-weight:700">Ja, inschakelen</div>
+        <div id="m-wal-confirm-nee" style="cursor:pointer;padding:15px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:18px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="m-wal-confirm-ja" style="cursor:pointer;padding:15px 28px;background:rgba(255,153,0,0.18);border:0.5px solid rgba(255,153,0,0.5);border-radius:12px;font-size:18px;color:#ffaa33;font-weight:700">Ja, inschakelen</div>
       </div>
     </div>
   </div>
 
   <div id="m-gen-confirm-popup" style="display:none;position:fixed;inset:0;z-index:103;background:rgba(0,0,0,0.80);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(255,90,60,0.5);border-radius:20px;padding:28px;width:min(320px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
-      <div style="font-size:11px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">GENERATOR STARTEN</div>
-      <div style="font-size:14px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je de generator<br>handmatig wilt starten?</div>
+      <div style="font-size:15px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:16px">GENERATOR STARTEN</div>
+      <div style="font-size:18px;color:rgba(255,255,255,0.95);margin-bottom:24px;line-height:1.5">Weet je zeker dat je de generator<br>handmatig wilt starten?</div>
       <div style="display:flex;gap:12px;justify-content:center">
-        <div id="m-gen-confirm-nee" style="cursor:pointer;padding:12px 24px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:14px;color:rgba(255,255,255,0.95)">Annuleren</div>
-        <div id="m-gen-confirm-ja" style="cursor:pointer;padding:12px 24px;background:rgba(255,90,60,0.2);border:0.5px solid rgba(255,90,60,0.55);border-radius:12px;font-size:14px;color:#ff8866;font-weight:700">Ja, starten</div>
+        <div id="m-gen-confirm-nee" style="cursor:pointer;padding:15px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:18px;color:rgba(255,255,255,0.95)">Annuleren</div>
+        <div id="m-gen-confirm-ja" style="cursor:pointer;padding:15px 28px;background:rgba(255,90,60,0.2);border:0.5px solid rgba(255,90,60,0.55);border-radius:12px;font-size:18px;color:#ff8866;font-weight:700">Ja, starten</div>
       </div>
     </div>
   </div>
@@ -3909,15 +3925,15 @@ ${(this._config && this._config.show_generator) ? `
   <div id="m-wal-limit-popup" style="display:none;position:fixed;inset:0;z-index:101;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center">
     <div style="background:rgba(6,16,48,0.97);border:1px solid rgba(0,170,255,0.4);border-radius:20px;padding:32px;width:min(340px,88vw);text-align:center;color:#fff;font-family:'Segoe UI',system-ui,sans-serif">
       <div style="font-size:12px;letter-spacing:3px;color:rgba(255,255,255,0.95);margin-bottom:8px">WALSTROOM LIMIET</div>
-      <div style="font-size:52px;font-weight:800;color:#00aaff;margin:16px 0" id="m-wal-limit-display">-- A</div>
+      <div style="font-size:56px;font-weight:800;color:#00aaff;margin:16px 0" id="m-wal-limit-display">-- A</div>
       <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-bottom:28px">
-        <div id="m-wal-limit-min" style="cursor:pointer;width:60px;height:60px;border-radius:50%;background:rgba(0,170,255,0.1);border:1.5px solid rgba(0,170,255,0.4);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#00aaff">−</div>
+        <div id="m-wal-limit-min" style="cursor:pointer;width:64px;height:64px;border-radius:50%;background:rgba(0,170,255,0.1);border:1.5px solid rgba(0,170,255,0.4);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#00aaff">−</div>
         <div style="font-size:13px;color:rgba(255,255,255,0.95)">1A per stap</div>
-        <div id="m-wal-limit-plus" style="cursor:pointer;width:60px;height:60px;border-radius:50%;background:rgba(0,170,255,0.1);border:1.5px solid rgba(0,170,255,0.4);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:700;color:#00aaff">+</div>
+        <div id="m-wal-limit-plus" style="cursor:pointer;width:64px;height:64px;border-radius:50%;background:rgba(0,170,255,0.1);border:1.5px solid rgba(0,170,255,0.4);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:700;color:#00aaff">+</div>
       </div>
       <div style="display:flex;gap:10px;justify-content:center">
-        <div id="m-wal-limit-set" style="cursor:pointer;padding:12px 28px;background:rgba(0,170,255,0.15);border:1px solid rgba(0,170,255,0.5);border-radius:12px;font-size:15px;font-weight:700;color:#00aaff">Instellen</div>
-        <div id="m-wal-limit-sluit" style="cursor:pointer;padding:12px 28px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:15px;color:rgba(255,255,255,0.95)">Sluiten</div>
+        <div id="m-wal-limit-set" style="cursor:pointer;padding:15px 30px;background:rgba(0,170,255,0.15);border:1px solid rgba(0,170,255,0.5);border-radius:12px;font-size:18px;font-weight:700;color:#00aaff">Instellen</div>
+        <div id="m-wal-limit-sluit" style="cursor:pointer;padding:15px 30px;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:12px;font-size:18px;color:rgba(255,255,255,0.95)">Sluiten</div>
       </div>
     </div>
   </div>
@@ -4286,11 +4302,30 @@ ${(this._config && this._config.show_generator) ? `
     }
 
     // Walstroom override (configureerbaar, valt terug op Eriks eigen helper)
+    const mWalOverrideConfirmPopup = this.shadowRoot.getElementById('m-wal-override-confirm-popup');
+    const mWalOverrideConfirmJa = this.shadowRoot.getElementById('m-wal-override-confirm-ja');
+    const mWalOverrideConfirmNee = this.shadowRoot.getElementById('m-wal-override-confirm-nee');
+    if (mWalOverrideConfirmPopup) {
+      if (this._mWalOverrideConfirmPopupOpen) mWalOverrideConfirmPopup.style.display = 'flex';
+      const sluitMOverrideConfirm = () => { this._mWalOverrideConfirmPopupOpen = false; mWalOverrideConfirmPopup.style.display = 'none'; };
+      if (mWalOverrideConfirmNee) mWalOverrideConfirmNee.onclick = (e) => { e.stopPropagation(); sluitMOverrideConfirm(); };
+      mWalOverrideConfirmPopup.onclick = (e) => { if (e.target === mWalOverrideConfirmPopup) sluitMOverrideConfirm(); };
+      if (mWalOverrideConfirmJa) mWalOverrideConfirmJa.onclick = (e) => {
+        e.stopPropagation();
+        if (this._hass) this._hass.callService('input_boolean', 'turn_on', { entity_id: walstroomOverrideEntity });
+        sluitMOverrideConfirm();
+      };
+    }
     const mWalOverrideBtn = this.shadowRoot.getElementById('m-wal-override-btn');
     if (mWalOverrideBtn && this._hass) {
       mWalOverrideBtn.onclick = () => {
         const aan = this._hass.states[walstroomOverrideEntity]?.state === 'on';
-        this._hass.callService('input_boolean', aan ? 'turn_off' : 'turn_on', { entity_id: walstroomOverrideEntity });
+        if (aan) {
+          this._hass.callService('input_boolean', 'turn_off', { entity_id: walstroomOverrideEntity });
+        } else {
+          this._mWalOverrideConfirmPopupOpen = true;
+          if (mWalOverrideConfirmPopup) mWalOverrideConfirmPopup.style.display = 'flex';
+        }
       };
     }
   }
