@@ -1710,6 +1710,19 @@ class FinallySkyCard extends HTMLElement {
           stroke="#00aaff" stroke-width="3" stroke-dasharray="14 8"
           opacity="0.7" class="flow-anim"/>
     ` : ''}
+    <!-- GRID/AC badge op de walstroom-flowlijn (halverwege mast↔boot) -->
+    ${gridActive ? (() => {
+      const lx = Math.round((gridX1 + bootFlowX) / 2);
+      const ly = Math.round((gridY1 + bootFlowY) / 2) - 50;
+      const bw = 160, bh = 44;
+      const gridLabel = acSourceLabel || 'WALSTROOM';
+      return `<rect x="${lx - bw/2}" y="${ly - bh/2}" width="${bw}" height="${bh}" rx="10"
+        fill="rgba(4,14,44,0.22)" stroke="rgba(0,170,255,0.6)" stroke-width="1.5"/>
+      <text x="${lx}" y="${ly - 8}" text-anchor="middle" fill="#00aaff" opacity="0.7"
+        font-size="11" font-weight="700" font-family="sans-serif" letter-spacing="2">${gridLabel}</text>
+      <text x="${lx}" y="${ly + 14}" text-anchor="middle" fill="#00aaff"
+        font-size="22" font-weight="800" font-family="sans-serif">${gridW} W</text>`;
+    })() : ''}
     <!-- Boot ↔ batterij: glow + stippellijn -->
     ${battActive ? '<path d="'+(battChar?battCurveIn:battCurveOut)+'" fill="none" stroke="'+(battChar?'#00ff88':'#ff9900')+'" stroke-width="10" stroke-dasharray="14 8" stroke-linecap="round" opacity="0.2" filter="url(#glow-batt)" class="'+(battChar?'flow-anim':'flow-anim-slow')+'"/>' : ''}
     <path d="${battChar ? battCurveIn : battCurveOut}" fill="none"
@@ -2215,6 +2228,7 @@ ${(this._config && this._config.dc_load_entity) ? `
       <div class="sl" style="font-size:13px">VERBRUIK</div>
       <div class="sr" style="gap:10px"><span class="sk" style="font-size:17px">12V</span><span class="sv2" style="color:#ffcc00;font-size:17px">${s(this._config.dc_load_entity).toFixed(0)} W</span></div>
       <div class="sr" style="gap:10px"><span class="sk" style="font-size:17px">230V</span><span class="sv2" style="color:#00d7ff;font-size:17px">${(this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0).toFixed(0)} W</span></div>
+      <div class="sr" style="gap:10px;margin-top:4px;padding-top:4px;border-top:1px solid rgba(255,255,255,0.15)"><span class="sk" style="font-size:15px;color:rgba(255,255,255,0.75)">TOTALE BELASTING</span><span class="sv2" style="color:#ffffff;font-size:18px;font-weight:800">${(s(this._config.dc_load_entity) + (this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0)).toFixed(0)} W</span></div>
     </div>
 ` : ''}
 
@@ -3579,6 +3593,10 @@ ${(this._config && this._config.show_kabola) ? `
       <div class="row">
         <span class="row-lbl">Verbruik 230V</span>
         <span class="row-val" style="color:#00d7ff">${(this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0).toFixed(0)} W</span>
+      </div>
+      <div class="row" style="border-top:1px solid rgba(255,255,255,0.15);margin-top:4px;padding-top:4px">
+        <span class="row-lbl" style="color:rgba(255,255,255,0.75)">Totale belasting</span>
+        <span class="row-val" style="color:#ffffff;font-weight:800">${(s(this._config.dc_load_entity) + (this._config.ac_load_entity ? s(this._config.ac_load_entity) : 0)).toFixed(0)} W</span>
       </div>
       ` : ''}
       ${(this._config && this._config.hide_waterhoogte) ? '' : `
