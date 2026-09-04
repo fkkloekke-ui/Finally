@@ -1512,6 +1512,13 @@ class FinallySkyCard extends HTMLElement {
     const pvActive   = pvW > 10 && sunAbove;
     const gridActive   = gridW > 20;
     const gridSpanning = parseFloat(acInV) > 100;
+    // AC active input source (Cerbo GX) — optionele, snelle manier om Walstroom/Generator/Standby
+    // te tonen zolang er nog geen losse Mastervolt-koppeling is voor de generatorstatus.
+    const acSourceEntity = (this._config && this._config.ac_active_input_source_entity) || null;
+    const acSource       = acSourceEntity ? st(acSourceEntity) : null;
+    const acSourceLabel  = acSource === 'generator' ? 'GENERATOR' : (acSource === 'shore_power' || acSource === 'grid') ? 'WALSTROOM' : (acSource === 'not_connected' || acSource === 'unknown') ? 'STANDBY' : null;
+    const acSourceColor  = acSourceLabel === 'GENERATOR' ? '#ffaa00' : acSourceLabel === 'WALSTROOM' ? '#00aaff' : acSourceLabel === 'STANDBY' ? '#00ff88' : null;
+    const acSourceBorder = acSourceLabel === 'GENERATOR' ? 'rgba(255,165,0,0.7)' : acSourceLabel === 'WALSTROOM' ? 'rgba(0,170,255,0.8)' : acSourceLabel === 'STANDBY' ? 'rgba(255,255,255,0.12)' : null;
     const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = hass ? st(walstroomSwitchEntity) === 'on' : false;
@@ -1772,12 +1779,12 @@ class FinallySkyCard extends HTMLElement {
 
   <!-- GRID label linksboven bij mast -->
   <div class="grid-lbl" style="${(this._config && this._config.walstroom_scale) ? `transform:scale(${this._config.walstroom_scale});transform-origin:top ${(this._config && this._config.walstroom_right !== undefined) ? 'right' : 'left'};` : ''}${(this._config && this._config.walstroom_right !== undefined) ? `right:${this._config.walstroom_right}px;left:auto;` : ''}${(this._config && this._config.walstroom_top !== undefined) ? `top:${this._config.walstroom_top}px;` : ''}">
-    <div class="fbox" style="border:1.5px solid ${gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)'};${(this._config && this._config.walstroom_width) ? `min-width:${this._config.walstroom_width}px;` : ''}">
+    <div class="fbox" style="border:1.5px solid ${acSourceBorder || (gridActive?'rgba(0,170,255,0.8)':gridSpanning?'rgba(255,165,0,0.7)':'rgba(255,255,255,0.12)')};${(this._config && this._config.walstroom_width) ? `min-width:${this._config.walstroom_width}px;` : ''}">
       <div class="lbl" style="letter-spacing:2px;font-size:17px">WALSTROOM</div>
-      <div style="font-size:30px;font-weight:800;color:${gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)'}">
-        ${gridActive ? gridW+' W' : gridSpanning ? acInV+' V' : 'OFF-GRID'}
+      <div style="font-size:30px;font-weight:800;color:${acSourceColor || (gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)')}">
+        ${acSourceLabel || (gridActive ? gridW+' W' : gridSpanning ? acInV+' V' : 'OFF-GRID')}
       </div>
-      ${gridActive ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; OFF-GRID</div>'}
+      ${acSourceLabel === 'GENERATOR' ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; GENERATOR</div>' : acSourceLabel === 'WALSTROOM' ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : acSourceLabel === 'STANDBY' ? '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; STANDBY</div>' : gridActive ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; OFF-GRID</div>'}
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div id="wal-limit-btn" data-action="wal-limit" style="cursor:pointer;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:10px;height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(255,255,255,0.95)">
           <span style="font-size:26px;line-height:1">&#9889;</span>
@@ -2978,6 +2985,11 @@ class FinallySkyCardMobile extends HTMLElement {
     const kabolaHuidigeTemp  = kabolaState ? (kabolaState.attributes.current_temperature ?? '--') : '--';
     const gridActive  = s(quattroInputPowerL1Entity) > 20;
     const gridSpanning = parseFloat(acInV) > 100;
+    // AC active input source (Cerbo GX) — optionele, snelle manier om Walstroom/Generator/Standby
+    // te tonen zolang er nog geen losse Mastervolt-koppeling is voor de generatorstatus.
+    const acSourceEntity = (this._config && this._config.ac_active_input_source_entity) || null;
+    const acSource       = acSourceEntity ? st(acSourceEntity) : null;
+    const acSourceLabel  = acSource === 'generator' ? 'GENERATOR' : (acSource === 'shore_power' || acSource === 'grid') ? 'WALSTROOM' : (acSource === 'not_connected' || acSource === 'unknown') ? 'STANDBY' : null;
     const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = st(walstroomSwitchEntity) === 'on';
@@ -3705,10 +3717,10 @@ ${(this._config && this._config.show_kabola) ? `
     <!-- Status header, zelfde als kiosk -->
     <div class="card" style="text-align:center;border-color:rgba(100,170,255,0.25);margin-bottom:8px">
       <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.6)">WALSTROOM</div>
-      <div style="font-size:26px;font-weight:800;color:${gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)'}">
-        ${gridActive ? gridW+' W' : (gridSpanning||walStandby) ? acInV+' V' : 'OFF-GRID'}
+      <div style="font-size:26px;font-weight:800;color:${acSourceLabel === 'GENERATOR' ? '#ffaa00' : acSourceLabel === 'WALSTROOM' ? '#00aaff' : acSourceLabel === 'STANDBY' ? '#00ff88' : (gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)')}">
+        ${acSourceLabel || (gridActive ? gridW+' W' : (gridSpanning||walStandby) ? acInV+' V' : 'OFF-GRID')}
       </div>
-      ${gridActive ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:13px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:13px">&#9679; OFF-GRID</div>'}
+      ${acSourceLabel === 'GENERATOR' ? '<div style="color:#ffaa00;font-size:13px">&#9679; GENERATOR</div>' : acSourceLabel === 'WALSTROOM' ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : acSourceLabel === 'STANDBY' ? '<div style="color:#00ff88;font-size:13px">&#9679; STANDBY</div>' : gridActive ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:13px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:13px">&#9679; OFF-GRID</div>'}
     </div>
 
     <!-- 4 knoppen: Limiet, Wal, Auto/Handmatig, Instellingen — zelfde indeling als kiosk -->
