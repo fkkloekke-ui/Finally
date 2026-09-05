@@ -669,11 +669,12 @@ class FinallySkyCard extends HTMLElement {
           <div class="sb-card-sub" id="ep-state-sub">--</div></div>
       </div>
       <div class="sb-section">Dagstatistieken</div>
-      <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:10px;margin-bottom:12px">
+      <div style="display:grid;grid-template-columns:repeat(9,1fr);gap:10px;margin-bottom:12px">
         <div class="sb-mini"><div class="sb-mini-lbl">Zonnepanelen vandaag</div><div class="sb-mini-val" id="ep-pvd" style="color:#ffd700">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Zonnepanelen gisteren</div><div class="sb-mini-val" id="ep-pvg" style="color:#ffaa44">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Zonnepanelen maand</div><div class="sb-mini-val" id="ep-pvm" style="color:#ff8800">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Walstroom dag</div><div class="sb-mini-val" id="ep-gd" style="color:#00aaff">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Walstroom gisteren</div><div class="sb-mini-val" id="ep-gg" style="color:#66c4ff">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Verbruik dag</div><div class="sb-mini-val" id="ep-ld" style="color:#ff8844">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">Verbruik maand</div><div class="sb-mini-val" id="ep-lm" style="color:#ff6622">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">DC spanning</div><div class="sb-mini-val" id="ep-dcv" style="color:#aaffcc">--</div></div>
@@ -898,6 +899,11 @@ class FinallySkyCard extends HTMLElement {
     // Walstroom-verbruik (configureerbaar, valt terug op Eriks eigen Shelly-sensoren)
     const walstroomDagverbruikEntity = (this._config && this._config.walstroom_dagverbruik_entity) || 'sensor.walstroom_dagverbruik';
     const walstroomVerbruikMaandEntity = (this._config && this._config.walstroom_verbruik_maand_entity) || 'sensor.walstroom_verbruik_maand';
+    // Walstroom gisteren: bij voorkeur een expliciet geconfigureerde entity; anders automatisch
+    // de "last_period"-attribuutwaarde van de dag-utility_meter (werkt alleen als
+    // walstroom_dagverbruik_entity zelf een HA utility_meter is — niet bij een device-eigen
+    // sensor zoals de Ogemray-relay bij Twin Dolphins, die heeft geen last_period).
+    const walstroomGisterenEntity = (this._config && this._config.walstroom_gisteren_entity) || null;
     const walstroomKwhPrijsEntity = (this._config && this._config.walstroom_kwh_prijs_entity) || null;
     const walstroomVerbruikWattEntity = (this._config && this._config.walstroom_verbruik_watt_entity) || 'sensor.walstroom_verbruik_watt';
     // PV-opbrengst (configureerbaar, valt terug op Eriks eigen Template Helpers)
@@ -941,6 +947,16 @@ class FinallySkyCard extends HTMLElement {
       T('ep-pvg',_s(mpptYieldYesterdayEntity).toFixed(2)+' kWh');
       T('ep-pvm', this._hasEntity(pvMaandEntity) ? _s(pvMaandEntity).toFixed(1)+' kWh' : '--');
       T('ep-gd', this._hasEntity(walstroomDagverbruikEntity) ? _s(walstroomDagverbruikEntity).toFixed(2)+' kWh' : '--');
+      let walGisterenVal = '--';
+      if (walstroomGisterenEntity && this._hasEntity(walstroomGisterenEntity)) {
+        walGisterenVal = _s(walstroomGisterenEntity).toFixed(2)+' kWh';
+      } else if (this._hasEntity(walstroomDagverbruikEntity)) {
+        const _lp = this._hass.states[walstroomDagverbruikEntity]?.attributes?.last_period;
+        if (_lp !== undefined && _lp !== null && _lp !== 'None' && !isNaN(parseFloat(_lp))) {
+          walGisterenVal = parseFloat(_lp).toFixed(2)+' kWh';
+        }
+      }
+      T('ep-gg', walGisterenVal);
       T('ep-ld', this._hasEntity(loadDagEntity) ? _s(loadDagEntity).toFixed(2)+' kWh' : '--');
       T('ep-lm', this._hasEntity(loadAanBoordMaandEntity) ? _s(loadAanBoordMaandEntity).toFixed(1)+' kWh' : '--');
       T('ep-dcv',dcV+' V'); T('ep-dcw',dcW+' W');
@@ -1516,9 +1532,9 @@ class FinallySkyCard extends HTMLElement {
     // te tonen zolang er nog geen losse Mastervolt-koppeling is voor de generatorstatus.
     const acSourceEntity = (this._config && this._config.ac_active_input_source_entity) || null;
     const acSource       = acSourceEntity ? st(acSourceEntity) : null;
-    const acSourceLabel  = acSource === 'generator' ? 'GENERATOR' : (acSource === 'shore_power' || acSource === 'grid') ? 'WALSTROOM' : (acSource === 'not_connected' || acSource === 'unknown') ? 'STANDBY' : null;
-    const acSourceColor  = acSourceLabel === 'GENERATOR' ? '#ffaa00' : acSourceLabel === 'WALSTROOM' ? '#00aaff' : acSourceLabel === 'STANDBY' ? '#00ff88' : null;
-    const acSourceBorder = acSourceLabel === 'GENERATOR' ? 'rgba(255,165,0,0.7)' : acSourceLabel === 'WALSTROOM' ? 'rgba(0,170,255,0.8)' : acSourceLabel === 'STANDBY' ? 'rgba(255,255,255,0.12)' : null;
+    const acSourceLabel  = acSource === 'generator' ? 'GENERATOR' : (acSource === 'shore_power' || acSource === 'grid') ? 'WALSTROOM' : null;
+    const acSourceColor  = acSourceLabel === 'GENERATOR' ? '#ffaa00' : acSourceLabel === 'WALSTROOM' ? '#00aaff' : null;
+    const acSourceBorder = acSourceLabel === 'GENERATOR' ? 'rgba(255,165,0,0.7)' : acSourceLabel === 'WALSTROOM' ? 'rgba(0,170,255,0.8)' : null;
     const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = hass ? st(walstroomSwitchEntity) === 'on' : false;
@@ -1797,7 +1813,7 @@ class FinallySkyCard extends HTMLElement {
       <div style="font-size:30px;font-weight:800;color:${acSourceColor || (gridActive?'#00aaff':gridSpanning?'#ffaa00':'rgba(255,255,255,0.55)')}">
         ${acSourceLabel || (gridActive ? gridW+' W' : gridSpanning ? acInV+' V' : 'OFF-GRID')}
       </div>
-      ${acSourceLabel === 'GENERATOR' ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; GENERATOR</div>' : acSourceLabel === 'WALSTROOM' ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : acSourceLabel === 'STANDBY' ? '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; STANDBY</div>' : gridActive ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; OFF-GRID</div>'}
+      ${acSourceLabel === 'GENERATOR' ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; GENERATOR</div>' : acSourceLabel === 'WALSTROOM' ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : gridActive ? '<div class="sub" style="color:#00aaff;font-size:18px">&#9679; AAN</div>' : gridSpanning ? '<div class="sub" style="color:#ffaa00;font-size:18px">&#9679; stand-by</div>' : '<div class="sub" style="color:#00ff88;font-size:18px">&#9679; OFF-GRID</div>'}
       <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div id="wal-limit-btn" data-action="wal-limit" style="cursor:pointer;background:rgba(255,255,255,0.06);border:0.5px solid rgba(255,255,255,0.15);border-radius:10px;height:96px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:rgba(255,255,255,0.95)">
           <span style="font-size:26px;line-height:1">&#9889;</span>
@@ -3003,7 +3019,7 @@ class FinallySkyCardMobile extends HTMLElement {
     // te tonen zolang er nog geen losse Mastervolt-koppeling is voor de generatorstatus.
     const acSourceEntity = (this._config && this._config.ac_active_input_source_entity) || null;
     const acSource       = acSourceEntity ? st(acSourceEntity) : null;
-    const acSourceLabel  = acSource === 'generator' ? 'GENERATOR' : (acSource === 'shore_power' || acSource === 'grid') ? 'WALSTROOM' : (acSource === 'not_connected' || acSource === 'unknown') ? 'STANDBY' : null;
+    const acSourceLabel  = acSource === 'generator' ? 'GENERATOR' : (acSource === 'shore_power' || acSource === 'grid') ? 'WALSTROOM' : null;
     const walstroomSwitchEntity = (this._config && this._config.walstroom_switch_entity) || 'switch.walstroom_socket_1';
     const walstroomOverrideEntity = (this._config && this._config.walstroom_override_entity) || 'input_boolean.walstroom_override';
     const walSocketAan = st(walstroomSwitchEntity) === 'on';
@@ -3735,10 +3751,10 @@ ${(this._config && this._config.show_kabola) ? `
     <!-- Status header, zelfde als kiosk -->
     <div class="card" style="text-align:center;border-color:rgba(100,170,255,0.25);margin-bottom:8px">
       <div style="font-size:11px;letter-spacing:2px;color:rgba(255,255,255,0.6)">WALSTROOM</div>
-      <div style="font-size:26px;font-weight:800;color:${acSourceLabel === 'GENERATOR' ? '#ffaa00' : acSourceLabel === 'WALSTROOM' ? '#00aaff' : acSourceLabel === 'STANDBY' ? '#00ff88' : (gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)')}">
+      <div style="font-size:26px;font-weight:800;color:${acSourceLabel === 'GENERATOR' ? '#ffaa00' : acSourceLabel === 'WALSTROOM' ? '#00aaff' : (gridActive?'#00aaff':(gridSpanning||walStandby)?'#ffaa00':'rgba(255,255,255,0.55)')}">
         ${acSourceLabel || (gridActive ? gridW+' W' : (gridSpanning||walStandby) ? acInV+' V' : 'OFF-GRID')}
       </div>
-      ${acSourceLabel === 'GENERATOR' ? '<div style="color:#ffaa00;font-size:13px">&#9679; GENERATOR</div>' : acSourceLabel === 'WALSTROOM' ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : acSourceLabel === 'STANDBY' ? '<div style="color:#00ff88;font-size:13px">&#9679; STANDBY</div>' : gridActive ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:13px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:13px">&#9679; OFF-GRID</div>'}
+      ${acSourceLabel === 'GENERATOR' ? '<div style="color:#ffaa00;font-size:13px">&#9679; GENERATOR</div>' : acSourceLabel === 'WALSTROOM' ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : gridActive ? '<div style="color:#00aaff;font-size:13px">&#9679; AAN</div>' : (gridSpanning||walStandby) ? '<div style="color:#ffaa00;font-size:13px">&#9679; stand-by</div>' : '<div style="color:#00ff88;font-size:13px">&#9679; OFF-GRID</div>'}
     </div>
 
     <!-- 4 knoppen: Limiet, Wal, Auto/Handmatig, Instellingen — zelfde indeling als kiosk -->
