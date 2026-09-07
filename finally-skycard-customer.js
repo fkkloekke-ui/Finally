@@ -636,6 +636,58 @@ class FinallySkyCard extends HTMLElement {
     // Vul met actuele data
     this._fillPopupData(id, container);
     if (id === 'pv-historie' || id === 'load-historie') this._wirePowerHistory(id, panel, container);
+    // Energie-popup: min/max spanning & SOC (dag/week/maand)
+    if (id === 'energie') this._wireMinMaxStats(panel, container);
+  }
+
+  _wireMinMaxStats(panel, container) {
+    const btns = panel.querySelectorAll('[data-mm-period]');
+    if (!this._mmPeriod) this._mmPeriod = 'dag';
+    const setActive = () => btns.forEach(b => b.classList.toggle('active', b.dataset.mmPeriod === this._mmPeriod));
+    setActive();
+    btns.forEach(b => {
+      b.onclick = () => {
+        this._mmPeriod = b.dataset.mmPeriod;
+        setActive();
+        this._loadMinMaxStats(container, this._mmPeriod);
+      };
+    });
+    this._loadMinMaxStats(container, this._mmPeriod);
+  }
+
+  async _loadMinMaxStats(container, period) {
+    if (!this._hass) return;
+    const socEntity  = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
+    const voltEntity = (this._config && this._config.smartshunt_voltage_entity) || 'sensor.smartshunt_hq2224ru6gc_spanning';
+    const T = (sel, val) => { const e = container.querySelector(sel); if (e) e.textContent = val; };
+    T('#mm-vmin', '…'); T('#mm-vmax', '…'); T('#mm-socmin', '…'); T('#mm-socmax', '…');
+    const hoursBack = period === 'dag' ? 24 : period === 'week' ? 24 * 7 : 24 * 30;
+    const bucket = period === 'dag' ? 'hour' : 'day';
+    const end = new Date();
+    const start = new Date(end.getTime() - hoursBack * 3600 * 1000);
+    try {
+      const result = await this._hass.callWS({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        statistic_ids: [voltEntity, socEntity],
+        period: bucket,
+        types: ['min', 'max'],
+      });
+      const vRows = (result && result[voltEntity]) || [];
+      const sRows = (result && result[socEntity]) || [];
+      if (vRows.length) {
+        T('#mm-vmin', Math.min(...vRows.map(r => r.min)).toFixed(2) + ' V');
+        T('#mm-vmax', Math.max(...vRows.map(r => r.max)).toFixed(2) + ' V');
+      } else { T('#mm-vmin', '--'); T('#mm-vmax', '--'); }
+      if (sRows.length) {
+        T('#mm-socmin', Math.round(Math.min(...sRows.map(r => r.min))) + ' %');
+        T('#mm-socmax', Math.round(Math.max(...sRows.map(r => r.max))) + ' %');
+      } else { T('#mm-socmin', '--'); T('#mm-socmax', '--'); }
+    } catch (e) {
+      console.warn('Finally Card: min/max statistieken laden mislukt', e);
+      T('#mm-vmin', '--'); T('#mm-vmax', '--'); T('#mm-socmin', '--'); T('#mm-socmax', '--');
+    }
   }
 
   _closeSidebar() {
@@ -860,6 +912,18 @@ class FinallySkyCard extends HTMLElement {
         <div class="sb-mini"><div class="sb-mini-lbl">Verbruik maand</div><div class="sb-mini-val" id="ep-lm" style="color:#ff6622">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">DC spanning</div><div class="sb-mini-val" id="ep-dcv" style="color:#aaffcc">--</div></div>
         <div class="sb-mini"><div class="sb-mini-lbl">DC vermogen</div><div class="sb-mini-val" id="ep-dcw" style="color:#aaffcc">--</div></div>
+      </div>
+      <div class="sb-section">Min/Max spanning &amp; SOC</div>
+      <div class="ph-periods" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="ph-period-btn" data-mm-period="dag">Dag</div>
+        <div class="ph-period-btn" data-mm-period="week">Week</div>
+        <div class="ph-period-btn" data-mm-period="maand">Maand</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
+        <div class="sb-mini"><div class="sb-mini-lbl">Laagste spanning</div><div class="sb-mini-val" id="mm-vmin" style="color:#ff6666">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Hoogste spanning</div><div class="sb-mini-val" id="mm-vmax" style="color:#66ff99">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Laagste SOC</div><div class="sb-mini-val" id="mm-socmin" style="color:#ff6666">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Hoogste SOC</div><div class="sb-mini-val" id="mm-socmax" style="color:#66ff99">--</div></div>
       </div>
       <div class="sb-section">Kosten &amp; rendement (&#8364;${((this._config && this._config.walstroom_kwh_prijs_entity && this._hass && parseFloat(this._hass.states[this._config.walstroom_kwh_prijs_entity]?.state)) || 0.50).toFixed(2)}/kWh)</div>
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px">
