@@ -609,6 +609,10 @@ class FinallySkyCard extends HTMLElement {
           border-radius: 7px; padding: 6px 2px; text-align: center; transition: background 0.3s, border-color 0.3s; }
         .cel-nr { font-size: 9px; color: rgba(255,255,255,0.95); margin-bottom: 2px; }
         .cel-v  { font-size: 12px; font-weight: 700; color: #fff; }
+        .ph-period-btn { padding: 7px 16px; border-radius: 9px; font-size: 12px; cursor: pointer;
+          background: rgba(255,255,255,0.05); border: 0.5px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.7); }
+        .ph-period-btn.active { background: rgba(0,170,255,0.18); border-color: rgba(0,170,255,0.5); color: #00ccff; }
+        .ph-period-btn:active { background: rgba(0,170,255,0.3); }
       `;
       container.appendChild(style);
       // Klik buiten panel = sluiten
@@ -631,6 +635,7 @@ class FinallySkyCard extends HTMLElement {
 
     // Vul met actuele data
     this._fillPopupData(id, container);
+    if (id === 'pv-historie' || id === 'load-historie') this._wirePowerHistory(id, panel, container);
   }
 
   _closeSidebar() {
@@ -638,13 +643,121 @@ class FinallySkyCard extends HTMLElement {
     if (c) { c.style.display = 'none'; c._activePanel = null; }
   }
 
+  _wirePowerHistory(id, panel, container) {
+    const btns = panel.querySelectorAll('.ph-period-btn');
+    const stateKey = '_phPeriod_' + id;
+    if (!this[stateKey]) this[stateKey] = 'dag';
+    const setActive = () => btns.forEach(b => b.classList.toggle('active', b.dataset.phPeriod === this[stateKey]));
+    setActive();
+    btns.forEach(b => {
+      b.onclick = () => {
+        this[stateKey] = b.dataset.phPeriod;
+        setActive();
+        this._loadPowerHistory(id, container, this[stateKey]);
+      };
+    });
+    this._loadPowerHistory(id, container, this[stateKey]);
+  }
+
+  async _loadPowerHistory(id, container, period) {
+    if (!this._hass) return;
+    const wrap = container.querySelector('#ph-chart-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:70px 0">Laden…</div>';
+    const entity = id === 'load-historie' ? 'sensor.gx_device_consumption_power_l1' : 'sensor.gx_device_pv_power';
+    const color = id === 'load-historie' ? '#ff8844' : '#ffd700';
+    const bucket = period === 'dag' ? 'hour' : 'day';
+    const hoursBack = period === 'dag' ? 24 : period === 'week' ? 24 * 7 : 24 * 30;
+    const end = new Date();
+    const start = new Date(end.getTime() - hoursBack * 3600 * 1000);
+    try {
+      const result = await this._hass.callWS({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        statistic_ids: [entity],
+        period: bucket,
+        types: ['mean', 'max'],
+      });
+      const rows = (result && result[entity]) || [];
+      if (!rows.length) {
+        wrap.innerHTML = '<div style="color:rgba(255,120,120,0.6);font-size:12px;text-align:center;padding:70px 0">Geen historische data gevonden voor deze periode</div>';
+        return;
+      }
+      const values = rows.map(r => r.mean || 0);
+      const maxVal = Math.max(...rows.map(r => r.max || r.mean || 0));
+      const avgVal = values.reduce((a, b) => a + b, 0) / values.length;
+      const bucketHours = bucket === 'hour' ? 1 : 24;
+      const totalKwh = values.reduce((a, b) => a + (b * bucketHours / 1000), 0);
+      const labels = rows.map(r => {
+        const d = new Date(r.start);
+        return bucket === 'hour' ? d.getHours() + 'u' : (d.getDate() + '/' + (d.getMonth() + 1));
+      });
+      wrap.innerHTML = this._powerBarChart(values, labels, color, 'W');
+      const T = (sel, val) => { const e = container.querySelector(sel); if (e) e.textContent = val; };
+      T('#ph-avg', Math.round(avgVal) + ' W');
+      T('#ph-max', Math.round(maxVal) + ' W');
+      T('#ph-total', totalKwh.toFixed(1) + ' kWh');
+    } catch (e) {
+      console.warn('Finally Card: vermogen-geschiedenis laden mislukt', e);
+      wrap.innerHTML = '<div style="color:rgba(255,120,120,0.6);font-size:12px;text-align:center;padding:70px 0">Kon geschiedenis niet laden</div>';
+    }
+  }
+
+  _powerBarChart(series, labels, color, unit) {
+    const n = series.length;
+    const maxV = Math.max(20, ...series);
+    const W = 860, H = 200, padL = 40, padR = 10, padT = 10, padB = 26;
+    const plotW = W - padL - padR, plotH = H - padT - padB;
+    const bw = plotW / n, barW = Math.max(2, bw * 0.7);
+    let bars = '';
+    const labelEvery = Math.max(1, Math.ceil(n / 12));
+    for (let i = 0; i < n; i++) {
+      const x0 = padL + i * bw + bw * 0.5;
+      const yBase = padT + plotH;
+      const h = (series[i] / maxV) * plotH;
+      bars += `<rect x="${(x0 - barW/2).toFixed(1)}" y="${(yBase - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${color}" opacity="0.85" rx="2"/>`;
+      if (i % labelEvery === 0) {
+        bars += `<text x="${x0.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.45)">${labels[i]}</text>`;
+      }
+    }
+    let grid = '';
+    for (let g = 0; g <= 4; g++) {
+      const y = padT + plotH - (g/4) * plotH;
+      grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)"/>`;
+      grid += `<text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="rgba(255,255,255,0.3)">${Math.round(maxV*g/4)}</text>`;
+    }
+    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${grid}${bars}</svg>
+      <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:6px;text-align:center">${unit} per ${n<=24?'uur':'dag'}</div>`;
+  }
+
   _buildPopupHTML(id) {
     const titles = {
       energie: '⚡ ENERGIE — REAL-TIME', solar: '☀️ ZONNEPANELEN',
       accu: `🔋 ACCUBANK${(this._config && this._config.hide_battery_label) ? '' : ` — ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`}`, generator: '⚙️ GENERATOR',
-      klimaat: '🌡️ KLIMAAT AAN BOORD', verlichting: '💡 VERLICHTING', systeem: '🖥️ SYSTEEM'
+      klimaat: '🌡️ KLIMAAT AAN BOORD', verlichting: '💡 VERLICHTING', systeem: '🖥️ SYSTEEM',
+      'pv-historie': '☀️ ZONNEPANELEN — GESCHIEDENIS', 'load-historie': '⚡ VERBRUIK — GESCHIEDENIS'
     };
     const h = (s) => `<div class="sb-title"><span>${titles[id]||id}</span><span class="sb-close">✕</span></div>` + s;
+
+    if (id === 'pv-historie' || id === 'load-historie') {
+      const isLoad = id === 'load-historie';
+      const kleur = isLoad ? '#ff8844' : '#ffd700';
+      return h(`
+      <div class="ph-periods" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="ph-period-btn" data-ph-period="dag">Dag</div>
+        <div class="ph-period-btn" data-ph-period="week">Week</div>
+        <div class="ph-period-btn" data-ph-period="maand">Maand</div>
+      </div>
+      <div id="ph-chart-wrap" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;min-height:200px">
+        <div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:70px 0">Laden…</div>
+      </div>
+      <div id="ph-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+        <div class="sb-mini"><div class="sb-mini-lbl">Gemiddeld</div><div class="sb-mini-val" id="ph-avg" style="color:${kleur}">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Piek</div><div class="sb-mini-val" id="ph-max" style="color:${kleur}">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">${isLoad ? 'Totaal verbruikt' : 'Totaal opgewekt'}</div><div class="sb-mini-val" id="ph-total" style="color:${kleur}">--</div></div>
+      </div>`);
+    }
 
     if (id === 'energie') return h(`
       <div class="sb-grid">
@@ -1868,7 +1981,7 @@ ${(this._config && this._config.zononder_left !== undefined && this._config.zono
 
   <!-- PV + PWR BALKEN naast elkaar breed onder de boot -->
   <div class="pwrbars">
-    <div class="pbrwrap" style="border-color:rgba(255,200,0,0.3)">
+    <div class="pbrwrap" data-sid="pv-historie" style="border-color:rgba(255,200,0,0.3);cursor:pointer">
       <div class="pbr-lbl">
         <span style="color:#ffd700;font-size:12px;font-weight:700;white-space:nowrap">☀ ZONNEPANELEN</span>
         <span style="color:#ffd700;font-size:14px;font-weight:700;white-space:nowrap">${pvW} W <span style="opacity:0.5;font-weight:400">/ ${pvMax} W</span></span>
@@ -1877,7 +1990,7 @@ ${(this._config && this._config.zononder_left !== undefined && this._config.zono
         <div class="pbr-fill" style="width:${pvPct.toFixed(1)}%;background:linear-gradient(90deg,#ff8800,#ffd700)"></div>
       </div>
     </div>
-    <div class="pbrwrap" style="border-color:rgba(255,100,50,0.3)">
+    <div class="pbrwrap" data-sid="load-historie" style="border-color:rgba(255,100,50,0.3);cursor:pointer">
       <div class="pbr-lbl">
         <span style="color:${loadKleur};font-size:12px;font-weight:700;white-space:nowrap${loadAlarm?';animation:pulse 0.6s ease-in-out infinite':''}">⚡ GEBRUIK NU${loadAlarm?' ⚠':''}</span>
         <span style="color:${loadKleur};font-size:14px;font-weight:700;white-space:nowrap">${loadW} W <span style="opacity:0.5;font-weight:400">/ ${loadMax} W</span></span>
@@ -2407,6 +2520,16 @@ ${(this._config && this._config.dc_load_entity) ? `
     const sidebar = this.shadowRoot.querySelector('.sidebar');
     if (sidebar) {
       sidebar.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-sid]');
+        if (btn) this._openSidebar(btn.dataset.sid);
+      });
+    }
+
+    // PV/Verbruik power bars — klik opent geschiedenis-popup
+    const pwrbars = this.shadowRoot.querySelector('.pwrbars');
+    if (pwrbars && !pwrbars._wired) {
+      pwrbars._wired = true;
+      pwrbars.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-sid]');
         if (btn) this._openSidebar(btn.dataset.sid);
       });
