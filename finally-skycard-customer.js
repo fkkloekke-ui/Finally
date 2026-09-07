@@ -693,7 +693,17 @@ class FinallySkyCard extends HTMLElement {
         const d = new Date(r.start);
         return bucket === 'hour' ? d.getHours() + 'u' : (d.getDate() + '/' + (d.getMonth() + 1));
       });
-      wrap.innerHTML = this._powerBarChart(values, labels, color, 'W');
+      const liveState = this._hass.states[entity];
+      const liveVal = liveState ? Math.round(parseFloat(liveState.state) || 0) + ' W' : '--';
+      const subtitle = liveState ? this._relTime(new Date(liveState.last_updated)) : '';
+      wrap.innerHTML = this._lineChartCard({
+        title: id === 'load-historie' ? 'Verbruik aan boord' : 'Zonnepanelen vermogen',
+        subtitle,
+        value: liveVal,
+        valueColor: color,
+        labels,
+        lines: [{ series: values, color, name: 'W' }]
+      });
       const T = (sel, val) => { const e = container.querySelector(sel); if (e) e.textContent = val; };
       T('#ph-avg', Math.round(avgVal) + ' W');
       T('#ph-max', Math.round(maxVal) + ' W');
@@ -704,31 +714,89 @@ class FinallySkyCard extends HTMLElement {
     }
   }
 
-  _powerBarChart(series, labels, color, unit) {
-    const n = series.length;
-    const maxV = Math.max(20, ...series);
-    const W = 860, H = 200, padL = 40, padR = 10, padT = 10, padB = 26;
+  _relTime(date) {
+    const diffSec = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
+    if (diffSec < 60) return 'zojuist bijgewerkt';
+    const min = Math.round(diffSec / 60);
+    if (min < 60) return min + ' minuut' + (min===1?'':'en') + ' geleden';
+    const hr = Math.round(min / 60);
+    if (hr < 24) return hr + ' uur geleden';
+    const day = Math.round(hr / 24);
+    return day + ' dag' + (day===1?'':'en') + ' geleden';
+  }
+
+  _smoothPath(pts) {
+    if (pts.length === 0) return '';
+    if (pts.length === 1) return `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[i === 0 ? 0 : i - 1], p1 = pts[i], p2 = pts[i + 1], p3 = pts[i + 2] || p2;
+      const cp1x = p1.x + (p2.x - p0.x) / 6, cp1y = p1.y + (p2.y - p0.y) / 6;
+      const cp2x = p2.x - (p3.x - p1.x) / 6, cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+    }
+    return d;
+  }
+
+  // Donker-thema "smooth lijn" grafiekkaart — header met titel/subtitel/waarde, net als de
+  // ingebouwde HA entiteit-geschiedenisgrafiek, maar in de dark-theme kleuren van de kaart.
+  _lineChartCard(opts) {
+    const H = opts.height || 200, W = 860, padL = 42, padR = 16, padT = 14, padB = 26;
     const plotW = W - padL - padR, plotH = H - padT - padB;
-    const bw = plotW / n, barW = Math.max(2, bw * 0.7);
-    let bars = '';
-    const labelEvery = Math.max(1, Math.ceil(n / 12));
+    const labels = opts.labels;
+    const n = labels.length;
+    const allVals = opts.lines.flatMap(l => l.series);
+    let maxV = Math.max(...allVals, 0.0001);
+    let minV = Math.min(0, ...allVals);
+    maxV = maxV + (maxV - minV) * 0.12;
+    const range = (maxV - minV) || 1;
+    const xAt = i => n <= 1 ? padL + plotW / 2 : padL + (i / (n - 1)) * plotW;
+    const yAt = v => padT + plotH - ((v - minV) / range) * plotH;
+    let defs = '', paths = '';
+    opts.lines.forEach((line, li) => {
+      const pts = line.series.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
+      const path = this._smoothPath(pts);
+      if (li === 0) {
+        const gradId = 'lg' + Math.random().toString(36).slice(2, 8);
+        defs += `<linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="${line.color}" stop-opacity="0.35"/>
+          <stop offset="100%" stop-color="${line.color}" stop-opacity="0"/>
+        </linearGradient>`;
+        const areaPath = `${path} L ${pts[n-1].x.toFixed(1)} ${(padT+plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT+plotH).toFixed(1)} Z`;
+        paths += `<path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>`;
+      }
+      paths += `<path d="${path}" fill="none" stroke="${line.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+      pts.forEach(p => { paths += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="${line.color}"/>`; });
+    });
+    let grid = '';
+    for (let g = 0; g <= 3; g++) {
+      const y = padT + plotH - (g / 3) * plotH;
+      const val = minV + (g / 3) * range;
+      grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)"/>`;
+      grid += `<text x="${(padL-8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="rgba(255,255,255,0.35)">${val.toFixed(Math.abs(val)<10?1:0)}</text>`;
+    }
+    const labelEvery = Math.max(1, Math.ceil(n / 6));
+    let xlabels = '';
     for (let i = 0; i < n; i++) {
-      const x0 = padL + i * bw + bw * 0.5;
-      const yBase = padT + plotH;
-      const h = (series[i] / maxV) * plotH;
-      bars += `<rect x="${(x0 - barW/2).toFixed(1)}" y="${(yBase - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${color}" opacity="0.85" rx="2"/>`;
-      if (i % labelEvery === 0) {
-        bars += `<text x="${x0.toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.45)">${labels[i]}</text>`;
+      if (i % labelEvery === 0 || i === n - 1) {
+        xlabels += `<text x="${xAt(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.35)">${labels[i]}</text>`;
       }
     }
-    let grid = '';
-    for (let g = 0; g <= 4; g++) {
-      const y = padT + plotH - (g/4) * plotH;
-      grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)"/>`;
-      grid += `<text x="${padL-6}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="9" fill="rgba(255,255,255,0.3)">${Math.round(maxV*g/4)}</text>`;
-    }
-    return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block">${grid}${bars}</svg>
-      <div style="font-size:10px;color:rgba(255,255,255,0.4);margin-top:6px;text-align:center">${unit} per ${n<=24?'uur':'dag'}</div>`;
+    const legend = opts.lines.length > 1 ? `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.5)">
+      ${opts.lines.map(l => `<span><span style="display:inline-block;width:8px;height:8px;background:${l.color};border-radius:50%;margin-right:5px"></span>${l.name}</span>`).join('')}
+    </div>` : '';
+    const headerColor = opts.valueColor || (opts.lines[0] && opts.lines[0].color) || '#fff';
+    return `<div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px 18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px">
+        <div>
+          <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.9)">${opts.title}</div>
+          ${opts.subtitle ? `<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">${opts.subtitle}</div>` : ''}
+        </div>
+        ${opts.value !== undefined && opts.value !== null ? `<div style="font-size:20px;font-weight:700;color:${headerColor};white-space:nowrap">${opts.value}</div>` : ''}
+      </div>
+      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"><defs>${defs}</defs>${grid}${paths}${xlabels}</svg>
+      ${legend}
+    </div>`;
   }
 
   _buildPopupHTML(id) {
