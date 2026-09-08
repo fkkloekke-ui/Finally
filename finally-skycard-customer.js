@@ -1786,6 +1786,9 @@ class FinallySkyCard extends HTMLElement {
     const walOverride  = hass ? st(walstroomOverrideEntity) === 'on' : false;
     const walstroomSpanningEntity = (this._config && this._config.walstroom_spanning_entity) || null;
     const walStandby = (hass && walstroomSpanningEntity) ? (!walSocketAan && s(walstroomSpanningEntity) > 200) : false;
+    // Aan/uit-net haven — optioneel: alleen bij havens met een power-monitoring walstroom-paal
+    const aanUitNetEntity = (this._config && this._config.aan_uit_net_boolean_entity) || null;
+    const aanUitNetActief = (hass && aanUitNetEntity) ? st(aanUitNetEntity) === 'on' : false;
     const battActive = Math.abs(battPow) > 10;
 
     // Tijd
@@ -2078,6 +2081,12 @@ class FinallySkyCard extends HTMLElement {
           <span style="font-size:15px;font-weight:600;text-align:center;line-height:1.05">INSTEL.</span>
         </div>
       </div>
+      ${aanUitNetEntity ? `
+      <div id="wal-aanuitnet-row" data-entity="${aanUitNetEntity}" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;padding:7px;border-radius:8px;background:rgba(255,255,255,0.03)">
+        <div id="wal-aanuitnet-check" style="width:18px;height:18px;flex-shrink:0;border-radius:4px;border:1.5px solid ${aanUitNetActief?'#00ff88':'rgba(255,255,255,0.3)'};background:${aanUitNetActief?'#00ff88':'transparent'};display:flex;align-items:center;justify-content:center">${aanUitNetActief?'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#04142c" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+        <span style="font-size:12px;color:rgba(255,255,255,0.65)">Aan/uit-net haven actief</span>
+      </div>
+      ` : ''}
     </div>
   </div>
 
@@ -2671,6 +2680,18 @@ ${(this._config && this._config.dc_load_entity) ? `
 
 
     // Walstroom instellingen popup
+    // Aan/uit-net haven checkbox — toggelt de bijbehorende input_boolean
+    const aanUitNetRow = this.shadowRoot.getElementById('wal-aanuitnet-row');
+    if (aanUitNetRow && !aanUitNetRow._wired) {
+      aanUitNetRow._wired = true;
+      aanUitNetRow.onclick = () => {
+        const ent = aanUitNetRow.dataset.entity;
+        if (ent && this._hass) {
+          this._hass.callService('input_boolean', 'toggle', { entity_id: ent });
+        }
+      };
+    }
+
     const wiBtn   = this.shadowRoot.getElementById('wal-instellingen-btn');
     const wiPopup = this.shadowRoot.getElementById('wal-inst-popup');
     const wiSluit = this.shadowRoot.getElementById('wi-sluit');
