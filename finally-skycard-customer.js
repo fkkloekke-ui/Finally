@@ -2082,9 +2082,9 @@ class FinallySkyCard extends HTMLElement {
         </div>
       </div>
       ${aanUitNetEntity ? `
-      <div id="wal-aanuitnet-row" data-entity="${aanUitNetEntity}" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:9px;cursor:pointer;padding:7px;border-radius:8px;background:rgba(255,255,255,0.03)">
-        <div id="wal-aanuitnet-check" style="width:18px;height:18px;flex-shrink:0;border-radius:4px;border:1.5px solid ${aanUitNetActief?'#00ff88':'rgba(255,255,255,0.3)'};background:${aanUitNetActief?'#00ff88':'transparent'};display:flex;align-items:center;justify-content:center">${aanUitNetActief?'<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#04142c" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
-        <span style="font-size:12px;color:rgba(255,255,255,0.65)">Aan/uit-net haven actief</span>
+      <div id="wal-aanuitnet-row" data-entity="${aanUitNetEntity}" style="margin-top:8px;display:flex;align-items:center;justify-content:center;gap:11px;cursor:pointer;padding:10px;border-radius:8px;background:rgba(255,255,255,0.03)">
+        <div id="wal-aanuitnet-check" style="width:26px;height:26px;flex-shrink:0;border-radius:5px;border:2px solid ${aanUitNetActief?'#00ff88':'rgba(255,255,255,0.3)'};background:${aanUitNetActief?'#00ff88':'transparent'};display:flex;align-items:center;justify-content:center">${aanUitNetActief?'<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#04142c" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>
+        <span style="font-size:16px;font-weight:600;color:rgba(255,255,255,0.85)">Aan/uit-net haven actief</span>
       </div>
       ` : ''}
     </div>
