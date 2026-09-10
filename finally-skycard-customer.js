@@ -2308,7 +2308,7 @@ class FinallySkyCard extends HTMLElement {
       <div style="margin-top:4px">${this._progressBar(pvPct, 'linear-gradient(90deg,#ff8800,#ffd700)', 155)}</div>
       <div class="sub" style="margin-top:3px;font-size:13px">${pvVandaag} kWh · gisteren ${pvGisteren}</div>
     </div>
-    <div class="tb" style="flex:1;min-width:220px;text-align:center;padding:14px 24px;justify-content:center">
+    <div class="tb" style="flex:0.5;min-width:110px;text-align:center;padding:14px 12px;justify-content:center">
       <div style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Totaal SOC</div>
       <div style="font-size:56px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${battSoc.toFixed(2)}%</div>
       <div style="height:7px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-top:12px">
@@ -2433,22 +2433,6 @@ ${(this._config && this._config.hide_bms) ? '' : `
         </div>
       </div>
 `}
-    </div>
-
-    <!-- Totaal SOC — nu volle breedte (was voorheen samen met Zon Onder) -->
-    <div class="batt-detail" style="width:100%;flex:${(this._config && this._config.soc_tile_flex) || 1};text-align:center;padding:10px 16px">
-      <div style="font-size:10px;color:rgba(255,255,255,0.95);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px">Totaal SOC</div>
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px">
-        <svg width="${(this._config && this._config.soc_icon_size) || 34}" height="${((this._config && this._config.soc_icon_size) || 34) * 1.85}" viewBox="0 0 26 48" fill="none">
-          <rect x="9" y="1" width="8" height="4" rx="1.5" fill="rgba(255,255,255,0.55)"/>
-          <rect x="1" y="5" width="24" height="42" rx="4" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
-          <rect x="5" y="${42 - Math.max(4, 34 * (battSoc/100))}" width="16" height="${Math.max(4, 34 * (battSoc/100))}" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
-        </svg>
-        <div style="font-size:${(this._config && this._config.soc_font_size) || 38}px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${battSoc.toFixed(1)}%</div>
-      </div>
-      <div style="height:5px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;margin-top:8px">
-        <div style="width:${battSoc}%;height:100%;background:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};border-radius:3px;transition:width 1s ease"></div>
-      </div>
     </div>
 
 ${(this._config && this._config.show_battery_voltage) ? `
