@@ -638,6 +638,7 @@ class FinallySkyCard extends HTMLElement {
     if (id === 'pv-historie' || id === 'load-historie') this._wirePowerHistory(id, panel, container);
     // Energie-popup: min/max spanning & SOC (dag/week/maand)
     if (id === 'energie') this._wireMinMaxStats(panel, container);
+    if (id === 'weerstation') this._wireWeerstation(container);
   }
 
   _wireMinMaxStats(panel, container) {
@@ -690,6 +691,119 @@ class FinallySkyCard extends HTMLElement {
     }
   }
 
+  async _wireWeerstation(container) {
+    if (!this._hass) return;
+    const zonkansPrefix = (this._config && this._config.weerstation_zonkans_prefix) || 'sensor.zonkans';
+    const regenkansPrefix = (this._config && this._config.weerstation_regenkans_prefix) || 'sensor.regenkans';
+    const yieldRefEntity = (this._config && this._config.weerstation_pv_yield_vandaag_entity) || null;
+    const zonRegenWrap = container.querySelector('#wx-zon-regen-chart');
+    const yieldWrap = container.querySelector('#wx-yield-chart');
+    const zon = [1,2,3,4,5].map(d => this._s(zonkansPrefix+'_'+d+'d'));
+    const regen = [1,2,3,4,5].map(d => this._s(regenkansPrefix+'_'+d+'d'));
+    const days = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
+    const dayLabels = [1,2,3,4,5].map(d => {
+      const fcDay = (this._forecast || [])[d-1];
+      return fcDay ? days[new Date(fcDay.datetime).getDay()] : ('+'+d+'d');
+    });
+    if (zonRegenWrap) {
+      const zonRegenTooltips = dayLabels.map((lbl, i) => ({
+        title: lbl,
+        rows: [
+          { color: '#ffd700', label: 'Zonkans', value: zon[i] + ' %', bold: false },
+          { color: '#66ccff', label: 'Regenkans', value: regen[i] + ' %', bold: false }
+        ]
+      }));
+      const zonRegenChart = this._comboChartCard({
+        title: 'Zonkans & regenkans',
+        subtitle: '5-daagse Buienradar-prognose (allemaal voorspelling)',
+        labels: dayLabels,
+        bars: { series: zon, color: '#ffd700', name: 'Zonkans %', hatchedFrom: 0 },
+        line: { series: regen, color: '#66ccff', name: 'Regenkans %', unit: '%' },
+        tooltips: zonRegenTooltips,
+      });
+      zonRegenWrap.innerHTML = zonRegenChart.html;
+      zonRegenChart.wire(zonRegenWrap);
+    }
+
+    if (!yieldWrap) return;
+    if (!yieldRefEntity) {
+      yieldWrap.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:60px 0">Configureer <code>weerstation_pv_yield_vandaag_entity</code> voor deze grafiek</div>';
+      return;
+    }
+    yieldWrap.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:60px 0">Referentie-opbrengst laden…</div>';
+    try {
+      const end = new Date();
+      const start = new Date(end.getTime() - 30 * 24 * 3600 * 1000);
+      const result = await this._hass.callWS({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        statistic_ids: [yieldRefEntity],
+        period: 'day',
+        types: ['change'],
+      });
+      const rows = result?.[yieldRefEntity] || [];
+      const refYield = rows.length ? Math.max(...rows.map(r => r.change || 0)) : 0;
+      const estimates = zon.map(z => refYield * (z / 100));
+      const yieldTooltips = dayLabels.map((lbl, i) => ({
+        title: lbl,
+        rows: [
+          { color: '#ffd700', label: 'Geschatte opbrengst', value: estimates[i].toFixed(1) + ' kWh', bold: true },
+          { color: '#ffd700', label: 'Zonkans', value: zon[i] + ' %', bold: false }
+        ]
+      }));
+      const yieldChart = this._comboChartCard({
+        title: 'Geschatte zonneopbrengst',
+        subtitle: `obv zonkans% × beste zonnedag afgelopen 30 dagen (${refYield.toFixed(1)} kWh) — schatting, geen harde voorspelling`,
+        labels: dayLabels,
+        bars: { series: estimates, color: '#ffd700', name: 'kWh', hatchedFrom: 0 },
+        tooltips: yieldTooltips,
+      });
+      yieldWrap.innerHTML = yieldChart.html;
+      yieldChart.wire(yieldWrap);
+    } catch(e) {
+      console.warn('Finally Card: zon-opbrengstprognose laden mislukt', e);
+      yieldWrap.innerHTML = '<div style="color:rgba(255,120,120,0.6);font-size:12px;text-align:center;padding:60px 0">Kon referentie-opbrengst niet laden</div>';
+    }
+  }
+
+  _windCompassSVG(bearingDeg, bft, kmh) {
+    const size = 110, cx = size/2, cy = size/2, r = size/2 - 8;
+    const marks = ['N','O','Z','W'].map((lbl, i) => {
+      const a = (i * 90 - 90) * Math.PI / 180;
+      return `<text x="${(cx+Math.cos(a)*(r-10)).toFixed(1)}" y="${(cy+Math.sin(a)*(r-10)+4).toFixed(1)}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.4)" font-family="sans-serif">${lbl}</text>`;
+    }).join('');
+    const a = (bearingDeg - 90) * Math.PI / 180;
+    const tipX = cx + Math.cos(a) * (r - 20), tipY = cy + Math.sin(a) * (r - 20);
+    const backA = a + Math.PI;
+    const backX = cx + Math.cos(backA) * (r * 0.35), backY = cy + Math.sin(backA) * (r * 0.35);
+    const wingSpread = 0.4;
+    const w1X = cx + Math.cos(a + Math.PI - wingSpread) * (r * 0.22), w1Y = cy + Math.sin(a + Math.PI - wingSpread) * (r * 0.22);
+    const w2X = cx + Math.cos(a + Math.PI + wingSpread) * (r * 0.22), w2Y = cy + Math.sin(a + Math.PI + wingSpread) * (r * 0.22);
+    const bftColor = bft >= 7 ? '#ff6666' : bft >= 4 ? '#ffaa44' : '#66ccaa';
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+      <circle cx="${cx}" cy="${cy}" r="${r*0.6}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+      ${marks}
+      <polygon points="${tipX.toFixed(1)},${tipY.toFixed(1)} ${w1X.toFixed(1)},${w1Y.toFixed(1)} ${backX.toFixed(1)},${backY.toFixed(1)} ${w2X.toFixed(1)},${w2Y.toFixed(1)}" fill="${bftColor}" opacity="0.9"/>
+      <circle cx="${cx}" cy="${cy}" r="3" fill="${bftColor}"/>
+      <text x="${cx}" y="${cy+r*0.6+16}" text-anchor="middle" font-size="15" font-weight="700" fill="${bftColor}" font-family="sans-serif">Bft ${bft.toFixed(0)}</text>
+    </svg>`;
+  }
+
+  _radialGauge(value, max, color, centerLabel) {
+    const size = 100, cx = size/2, cy = size/2, r = size/2 - 8;
+    const pct = Math.min(Math.max(value/max, 0), 1);
+    const circumference = 2 * Math.PI * r;
+    const dash = circumference * pct;
+    return `<svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="transform:rotate(-90deg)">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,0.08)" stroke-width="9"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${color}" stroke-width="9" stroke-linecap="round"
+        stroke-dasharray="${dash.toFixed(1)} ${circumference.toFixed(1)}"/>
+      <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="18" font-weight="700" fill="${color}" font-family="sans-serif" style="transform:rotate(90deg);transform-origin:${cx}px ${cy}px">${centerLabel}</text>
+    </svg>`;
+  }
+
   _closeSidebar() {
     const c = this.shadowRoot.getElementById('sb-overlay-container');
     if (c) { c.style.display = 'none'; c._activePanel = null; }
@@ -717,6 +831,7 @@ class FinallySkyCard extends HTMLElement {
     if (!wrap) return;
     wrap.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:70px 0">Laden…</div>';
     const entity = id === 'load-historie' ? 'sensor.gx_device_consumption_power_l1' : 'sensor.gx_device_pv_power';
+    const socEntity = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
     const color = id === 'load-historie' ? '#ff8844' : '#ffd700';
     const bucket = period === 'dag' ? 'hour' : 'day';
     const hoursBack = period === 'dag' ? 24 : period === 'week' ? 24 * 7 : 24 * 30;
@@ -727,11 +842,12 @@ class FinallySkyCard extends HTMLElement {
         type: 'recorder/statistics_during_period',
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-        statistic_ids: [entity],
+        statistic_ids: [entity, socEntity],
         period: bucket,
-        types: ['mean', 'max'],
+        types: ['mean', 'min', 'max'],
       });
       const rows = (result && result[entity]) || [];
+      const socRows = (result && result[socEntity]) || [];
       if (!rows.length) {
         wrap.innerHTML = '<div style="color:rgba(255,120,120,0.6);font-size:12px;text-align:center;padding:70px 0">Geen historische data gevonden voor deze periode</div>';
         return;
@@ -740,22 +856,41 @@ class FinallySkyCard extends HTMLElement {
       const maxVal = Math.max(...rows.map(r => r.max || r.mean || 0));
       const avgVal = values.reduce((a, b) => a + b, 0) / values.length;
       const bucketHours = bucket === 'hour' ? 1 : 24;
-      const totalKwh = values.reduce((a, b) => a + (b * bucketHours / 1000), 0);
+      const kwhSeries = values.map(v => v * bucketHours / 1000);
+      const totalKwh = kwhSeries.reduce((a, b) => a + b, 0);
       const labels = rows.map(r => {
         const d = new Date(r.start);
         return bucket === 'hour' ? d.getHours() + 'u' : (d.getDate() + '/' + (d.getMonth() + 1));
       });
+      const socMean = rows.map((r, i) => socRows[i] ? Math.round(socRows[i].mean) : null);
+      const socMin = rows.map((r, i) => socRows[i] ? Math.round(socRows[i].min) : null);
+      const socMax = rows.map((r, i) => socRows[i] ? Math.round(socRows[i].max) : null);
+      const hasSoc = socRows.length === rows.length;
       const liveState = this._hass.states[entity];
       const liveVal = liveState ? Math.round(parseFloat(liveState.state) || 0) + ' W' : '--';
       const subtitle = liveState ? this._relTime(new Date(liveState.last_updated)) : '';
-      wrap.innerHTML = this._lineChartCard({
-        title: id === 'load-historie' ? 'Verbruik aan boord' : 'Zonnepanelen vermogen',
-        subtitle,
-        value: liveVal,
-        valueColor: color,
-        labels,
-        lines: [{ series: values, color, name: 'W' }]
+      const nowIndex = bucket === 'hour' ? rows.length - 1 : null;
+      const tooltips = labels.map((lbl, i) => {
+        const rangeLbl = bucket === 'hour' ? `${lbl} - ${(parseInt(lbl,10)+1)%24}:00` : lbl;
+        const rowsT = [
+          { color, label: id === 'load-historie' ? 'Verbruik' : 'Zon', value: kwhSeries[i].toFixed(2) + ' kWh', bold: false }
+        ];
+        if (hasSoc) {
+          rowsT.push({ color: '#66c4ff', label: 'Accu gemiddeld', value: socMean[i] + ' %', bold: true });
+          rowsT.push({ color: '#66c4ff', label: 'Accu min/max', value: `${socMin[i]}% - ${socMax[i]}%`, bold: false });
+        }
+        return { title: rangeLbl, rows: rowsT };
       });
+      const chart = this._comboChartCard({
+        title: (id === 'load-historie' ? 'Verbruik aan boord' : 'Zonnepanelen vermogen') + ` — ${liveVal}, ${subtitle}`,
+        labels,
+        bars: { series: kwhSeries, color, name: id === 'load-historie' ? 'Verbruik' : 'Zon', unit: 'kWh' },
+        line: hasSoc ? { series: socMean, minSeries: socMin, maxSeries: socMax, color: '#66c4ff', name: 'Accu SOC', unit: '%' } : null,
+        nowIndex,
+        tooltips,
+      });
+      wrap.innerHTML = chart.html;
+      chart.wire(wrap);
       const T = (sel, val) => { const e = container.querySelector(sel); if (e) e.textContent = val; };
       T('#ph-avg', Math.round(avgVal) + ' W');
       T('#ph-max', Math.round(maxVal) + ' W');
@@ -790,75 +925,182 @@ class FinallySkyCard extends HTMLElement {
     return d;
   }
 
-  // Donker-thema "smooth lijn" grafiekkaart — header met titel/subtitel/waarde, net als de
-  // ingebouwde HA entiteit-geschiedenisgrafiek, maar in de dark-theme kleuren van de kaart.
-  _lineChartCard(opts) {
-    const H = opts.height || 200, W = 860, padL = 42, padR = 16, padT = 14, padB = 26;
+  // Victron-VRM-stijl combo-grafiek: staven (evt. gearceerd = voorspelling) op de linker-as,
+  // optioneel een lijn met min/max-band op de rechter-as, "Nu"-markering, en een hover-tooltip
+  // per tijdvak. Retourneert {html, wire(container)} — wire() moet ná het invoegen van html
+  // aangeroepen worden om de tooltip-interactie te koppelen.
+  _comboChartCard(opts) {
+    const H = opts.height || 260, W = 900, padL = 44, padR = opts.line ? 44 : 16, padT = 16, padB = 30;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const labels = opts.labels;
     const n = labels.length;
-    const allVals = opts.lines.flatMap(l => l.series);
-    let maxV = Math.max(...allVals, 0.0001);
-    let minV = Math.min(0, ...allVals);
-    maxV = maxV + (maxV - minV) * 0.12;
-    const range = (maxV - minV) || 1;
-    const xAt = i => n <= 1 ? padL + plotW / 2 : padL + (i / (n - 1)) * plotW;
-    const yAt = v => padT + plotH - ((v - minV) / range) * plotH;
-    let defs = '', paths = '';
-    opts.lines.forEach((line, li) => {
-      const pts = line.series.map((v, i) => ({ x: xAt(i), y: yAt(v) }));
-      const path = this._smoothPath(pts);
-      if (li === 0) {
-        const gradId = 'lg' + Math.random().toString(36).slice(2, 8);
-        defs += `<linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="${line.color}" stop-opacity="0.35"/>
-          <stop offset="100%" stop-color="${line.color}" stop-opacity="0"/>
-        </linearGradient>`;
-        const areaPath = `${path} L ${pts[n-1].x.toFixed(1)} ${(padT+plotH).toFixed(1)} L ${pts[0].x.toFixed(1)} ${(padT+plotH).toFixed(1)} Z`;
-        paths += `<path d="${areaPath}" fill="url(#${gradId})" stroke="none"/>`;
-      }
-      paths += `<path d="${path}" fill="none" stroke="${line.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
-      pts.forEach(p => { paths += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="${line.color}"/>`; });
+    const bars = opts.bars;
+    const barMax = Math.max(...bars.series, 0.0001) * 1.15;
+    const bw = plotW / n, barW = Math.max(3, bw * 0.6);
+    const xCenter = i => padL + i * bw + bw / 2;
+    const yBar = v => padT + plotH - (v / barMax) * plotH;
+    const hatchId = 'hatch' + Math.random().toString(36).slice(2, 8);
+    let defs = `<pattern id="${hatchId}" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="6" height="6" fill="${bars.color}" opacity="0.85"/>
+      <line x1="0" y1="0" x2="0" y2="6" stroke="rgba(4,14,44,0.55)" stroke-width="2"/>
+    </pattern>`;
+    let nowMarker = '';
+    if (opts.nowIndex !== undefined && opts.nowIndex !== null && opts.nowIndex >= 0 && opts.nowIndex < n) {
+      const nx0 = padL + opts.nowIndex * bw;
+      nowMarker = `<rect x="${nx0.toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${plotH}" fill="rgba(255,255,255,0.06)"/>
+        <rect x="${nx0.toFixed(1)}" y="${(padT-18).toFixed(1)}" width="${bw.toFixed(1)}" height="16" rx="4" fill="rgba(255,255,255,0.12)"/>
+        <text x="${(nx0+bw/2).toFixed(1)}" y="${(padT-6).toFixed(1)}" text-anchor="middle" font-size="9" font-weight="700" fill="rgba(255,255,255,0.65)">NU</text>`;
+    }
+    let barsHtml = '';
+    bars.series.forEach((v, i) => {
+      const isForecast = bars.hatchedFrom !== undefined && bars.hatchedFrom !== null && i >= bars.hatchedFrom;
+      const y = yBar(v), h = padT + plotH - y;
+      barsHtml += `<rect x="${(xCenter(i)-barW/2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${Math.max(0,h).toFixed(1)}" fill="${isForecast ? `url(#${hatchId})` : bars.color}" opacity="${isForecast?0.9:0.95}" rx="2"/>`;
     });
+    let lineHtml = '';
+    if (opts.line) {
+      const lMax = Math.max(...opts.line.series, ...(opts.line.maxSeries||opts.line.series)) * 1.08;
+      const lMin = Math.min(...opts.line.series, ...(opts.line.minSeries||opts.line.series)) * 0.92;
+      const lRange = (lMax - lMin) || 1;
+      const yLine = v => padT + plotH - ((v - lMin) / lRange) * plotH;
+      const pts = opts.line.series.map((v, i) => ({ x: xCenter(i), y: yLine(v) }));
+      if (opts.line.minSeries && opts.line.maxSeries) {
+        const topPts = opts.line.maxSeries.map((v, i) => ({ x: xCenter(i), y: yLine(v) }));
+        const botPts = opts.line.minSeries.map((v, i) => ({ x: xCenter(i), y: yLine(v) })).reverse();
+        const bandPath = this._smoothPath(topPts) + ' L ' + botPts.map(p=>`${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L ') + ' Z';
+        lineHtml += `<path d="${bandPath}" fill="${opts.line.color}" opacity="0.12" stroke="none"/>`;
+      }
+      lineHtml += `<path d="${this._smoothPath(pts)}" fill="none" stroke="${opts.line.color}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`;
+      pts.forEach(p => { lineHtml += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3" fill="${opts.line.color}"/>`; });
+      for (let g = 0; g <= 3; g++) {
+        const y = padT + plotH - (g/3) * plotH;
+        const val = lMin + (g/3) * lRange;
+        lineHtml += `<text x="${(W-padR+8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="start" font-size="10" fill="${opts.line.color}" opacity="0.6">${Math.round(val)}${opts.line.unit||''}</text>`;
+      }
+    }
     let grid = '';
     for (let g = 0; g <= 3; g++) {
-      const y = padT + plotH - (g / 3) * plotH;
-      const val = minV + (g / 3) * range;
+      const y = padT + plotH - (g/3) * plotH;
+      const val = (g/3) * barMax;
       grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="rgba(255,255,255,0.06)"/>`;
-      grid += `<text x="${(padL-8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="rgba(255,255,255,0.35)">${val.toFixed(Math.abs(val)<10?1:0)}</text>`;
+      grid += `<text x="${(padL-8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="rgba(255,255,255,0.35)">${val < 10 ? val.toFixed(2) : Math.round(val)}</text>`;
     }
-    const labelEvery = Math.max(1, Math.ceil(n / 6));
+    const labelEvery = Math.max(1, Math.ceil(n / 8));
     let xlabels = '';
     for (let i = 0; i < n; i++) {
       if (i % labelEvery === 0 || i === n - 1) {
-        xlabels += `<text x="${xAt(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.35)">${labels[i]}</text>`;
+        xlabels += `<text x="${xCenter(i).toFixed(1)}" y="${H-8}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,0.35)">${labels[i]}</text>`;
       }
     }
-    const legend = opts.lines.length > 1 ? `<div style="display:flex;gap:16px;margin-top:8px;font-size:11px;color:rgba(255,255,255,0.5)">
-      ${opts.lines.map(l => `<span><span style="display:inline-block;width:8px;height:8px;background:${l.color};border-radius:50%;margin-right:5px"></span>${l.name}</span>`).join('')}
-    </div>` : '';
-    const headerColor = opts.valueColor || (opts.lines[0] && opts.lines[0].color) || '#fff';
-    return `<div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px 18px">
+    let hitZones = '';
+    for (let i = 0; i < n; i++) {
+      hitZones += `<rect class="fc-hit" data-i="${i}" x="${(padL + i*bw).toFixed(1)}" y="${padT}" width="${bw.toFixed(1)}" height="${plotH}" fill="transparent" style="cursor:pointer"/>`;
+    }
+    const legendItems = [];
+    legendItems.push({ color: bars.color, name: bars.name, hatched: bars.hatchedFrom !== undefined && bars.hatchedFrom !== null });
+    if (opts.line) legendItems.push({ color: opts.line.color, name: opts.line.name, hatched: false });
+    const legend = `<div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:rgba(255,255,255,0.5);flex-wrap:wrap">
+      ${legendItems.map(l => `<span><span style="display:inline-block;width:10px;height:10px;background:${l.color};border-radius:2px;margin-right:5px;${l.hatched?'opacity:0.6':''}"></span>${l.name}${l.hatched?' (voorspelling)':''}</span>`).join('')}
+    </div>`;
+    const chartId = 'fc' + Math.random().toString(36).slice(2, 8);
+    const html = `<div style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:14px;padding:16px 18px">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;gap:10px">
         <div>
           <div style="font-size:13px;font-weight:600;color:rgba(255,255,255,0.9)">${opts.title}</div>
           ${opts.subtitle ? `<div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:2px">${opts.subtitle}</div>` : ''}
         </div>
-        ${opts.value !== undefined && opts.value !== null ? `<div style="font-size:20px;font-weight:700;color:${headerColor};white-space:nowrap">${opts.value}</div>` : ''}
       </div>
-      <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"><defs>${defs}</defs>${grid}${paths}${xlabels}</svg>
+      <div id="${chartId}" style="position:relative">
+        <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;display:block"><defs>${defs}</defs>${grid}${nowMarker}${barsHtml}${lineHtml}${xlabels}${hitZones}</svg>
+        <div class="fc-tooltip" style="display:none;position:absolute;pointer-events:none;background:rgba(10,20,40,0.96);border:0.5px solid rgba(100,170,255,0.3);border-radius:8px;padding:9px 12px;font-size:12px;color:#fff;white-space:nowrap;z-index:20;box-shadow:0 4px 14px rgba(0,0,0,0.4)"></div>
+      </div>
       ${legend}
     </div>`;
+    const tooltips = opts.tooltips;
+    const wire = (container) => {
+      const root = container.querySelector('#' + chartId);
+      if (!root) return;
+      const tip = root.querySelector('.fc-tooltip');
+      const svgEl = root.querySelector('svg');
+      root.querySelectorAll('.fc-hit').forEach(hit => {
+        hit.addEventListener('mouseenter', () => {
+          const i = parseInt(hit.dataset.i, 10);
+          const t = tooltips[i];
+          if (!t) return;
+          tip.innerHTML = `<div style="font-weight:700;margin-bottom:5px;color:rgba(255,255,255,0.9)">${t.title}</div>` +
+            t.rows.map(r => `<div style="display:flex;align-items:center;gap:6px;margin-top:2px">
+              <span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${r.color}"></span>
+              <span style="color:rgba(255,255,255,0.6);flex:1">${r.label}</span>
+              <span style="font-weight:${r.bold?'700':'400'};margin-left:10px">${r.value}</span>
+            </div>`).join('');
+          tip.style.display = 'block';
+        });
+        hit.addEventListener('mousemove', (e) => {
+          const rect = svgEl.getBoundingClientRect();
+          const relX = e.clientX - rect.left, relY = e.clientY - rect.top;
+          let left = relX + 14, top = relY - 10;
+          if (left + 180 > rect.width) left = relX - 194;
+          tip.style.left = left + 'px';
+          tip.style.top = Math.max(0, top) + 'px';
+        });
+        hit.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+      });
+    };
+    return { html, wire };
   }
 
   _buildPopupHTML(id) {
     const titles = {
       energie: '⚡ ENERGIE — REAL-TIME', solar: '☀️ ZONNEPANELEN',
       accu: `🔋 ACCUBANK${(this._config && this._config.hide_battery_label) ? '' : ` — ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`}`, generator: '⚙️ GENERATOR',
-      klimaat: '🌡️ KLIMAAT AAN BOORD', verlichting: '💡 VERLICHTING', systeem: '🖥️ SYSTEEM',
-      'pv-historie': '☀️ ZONNEPANELEN — GESCHIEDENIS', 'load-historie': '⚡ VERBRUIK — GESCHIEDENIS'
+      klimaat: '🌡️ KLIMAAT AAN BOORD', systeem: '🖥️ SYSTEEM',
+      'pv-historie': '☀️ ZONNEPANELEN — GESCHIEDENIS', 'load-historie': '⚡ VERBRUIK — GESCHIEDENIS',
+      weerstation: '⛅ WEERSTATION — BUIENRADAR'
     };
     const h = (s) => `<div class="sb-title"><span>${titles[id]||id}</span><span class="sb-close">✕</span></div>` + s;
+
+    if (id === 'weerstation') return h(`
+      <div class="sb-grid">
+        <div class="sb-card" style="text-align:center">
+          <div class="sb-card-lbl">Temperatuur</div>
+          <div class="sb-card-val" id="wx-temp" style="color:#ffcc66">--°C</div>
+          <div class="sb-card-sub" id="wx-gevoel">gevoel --°C</div>
+        </div>
+        <div class="sb-card" style="text-align:center">
+          <div class="sb-card-lbl">Wind</div>
+          <div id="wx-compass" style="display:flex;justify-content:center;margin:2px 0"></div>
+          <div class="sb-card-sub" id="wx-windtekst">-- km/h · -- · Bft --</div>
+        </div>
+        <div class="sb-card" style="text-align:center">
+          <div class="sb-card-lbl">Luchtvochtigheid</div>
+          <div id="wx-vochtgauge" style="display:flex;justify-content:center;margin:2px 0"></div>
+          <div class="sb-card-sub" id="wx-vochtsub">--</div>
+        </div>
+      </div>
+      <div class="sb-grid2">
+        <div class="sb-card" style="text-align:center">
+          <div class="sb-card-lbl">Regenkans vandaag</div>
+          <div id="wx-regengauge" style="display:flex;justify-content:center;margin:2px 0"></div>
+        </div>
+        <div class="sb-card">
+          <div class="sb-row"><span class="sb-row-lbl">Weerstation</span><span class="sb-row-val" id="wx-station">--</span></div>
+          <div class="sb-row"><span class="sb-row-lbl">Conditie</span><span class="sb-row-val" id="wx-cond">--</span></div>
+          <div class="sb-row"><span class="sb-row-lbl">Laatste meting</span><span class="sb-row-val" id="wx-meting">--</span></div>
+          <div class="sb-row"><span class="sb-row-lbl">Bron</span><span class="sb-row-val">buienradar.nl</span></div>
+        </div>
+      </div>
+      <div class="sb-section">5-daagse vooruitzichten</div>
+      <div id="wx-forecast-table" style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">
+        <div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;grid-column:span 5;padding:20px 0">Laden…</div>
+      </div>
+      <div class="sb-section">Zonkans &amp; regenkans per dag</div>
+      <div id="wx-zon-regen-chart" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;min-height:180px">
+        <div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:60px 0">Laden…</div>
+      </div>
+      <div class="sb-section">Geschatte zonneopbrengst (obv zonkans%)</div>
+      <div id="wx-yield-chart" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;min-height:180px">
+        <div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:60px 0">Laden…</div>
+      </div>`);
 
     if (id === 'pv-historie' || id === 'load-historie') {
       const isLoad = id === 'load-historie';
@@ -1075,14 +1317,6 @@ class FinallySkyCard extends HTMLElement {
           <div class="sb-card-lbl">Buiten / Water</div>
           <div class="sb-row"><span class="sb-row-lbl">Wind</span><span class="sb-row-val" id="kp-wind">--</span></div>
           <div class="sb-row"><span class="sb-row-lbl">Windrichting</span><span class="sb-row-val" id="kp-wdir">--</span></div>
-        </div>
-      </div>`);
-
-    if (id === 'verlichting') return h(`
-      <div class="sb-card">
-        <div style="text-align:center;padding:24px;color:rgba(255,255,255,0.95);font-size:14px">
-          💡 Verlichtingsentiteiten nog niet geconfigureerd.<br>
-          <span style="font-size:12px;opacity:0.6">Voeg je light.* entiteiten toe om hier te bedienen.</span>
         </div>
       </div>`);
 
@@ -1317,6 +1551,60 @@ class FinallySkyCard extends HTMLElement {
         T('syp-wt', pct.toFixed(0)+'%'+litersTxt);
       }
     }
+    else if (id === 'weerstation') {
+      const wxWeatherEntity = (this._config && this._config.weerstation_entity) || 'weather.buienradar';
+      const wxTempEntity = (this._config && this._config.weerstation_temperatuur_entity) || 'sensor.temperatuur';
+      const wxGevoelEntity = (this._config && this._config.weerstation_gevoelstemperatuur_entity) || 'sensor.gevoelstemperatuur';
+      const wxWindEntity = (this._config && this._config.weerstation_windsnelheid_entity) || 'sensor.windsnelheid';
+      const wxWindDirEntity = (this._config && this._config.weerstation_windrichting_entity) || 'sensor.windrichting';
+      const wxWindBftEntity = (this._config && this._config.weerstation_windkracht_entity) || 'sensor.windkracht';
+      const wxVochtEntity = (this._config && this._config.weerstation_luchtvochtigheid_entity) || 'sensor.luchtvochtigheid';
+      const wxStationEntity = (this._config && this._config.weerstation_stationnaam_entity) || 'sensor.stationnaam';
+      const zonkansPrefix = (this._config && this._config.weerstation_zonkans_prefix) || 'sensor.zonkans';
+      const regenkansPrefix = (this._config && this._config.weerstation_regenkans_prefix) || 'sensor.regenkans';
+      const windkrachtPrefix = (this._config && this._config.weerstation_windkracht_prefix) || 'sensor.windkracht';
+      const temp = _s(wxTempEntity), gevoel = _s(wxGevoelEntity);
+      const windKmh = _s(wxWindEntity), windDir = _st(wxWindDirEntity), windBft = _s(wxWindBftEntity);
+      const bearing = parseFloat(_at(wxWeatherEntity,'wind_bearing')) || 0;
+      const vocht = _s(wxVochtEntity);
+      const regenkans = _s(regenkansPrefix + '_1d');
+      T('wx-temp', this._hasEntity(wxTempEntity) ? temp.toFixed(1)+'°C' : '--');
+      T('wx-gevoel', this._hasEntity(wxGevoelEntity) ? 'gevoel '+gevoel.toFixed(1)+'°C' : '');
+      T('wx-windtekst', windKmh.toFixed(1)+' km/h · '+windDir+' · Bft '+windBft.toFixed(0));
+      T('wx-vochtsub', this._hasEntity(wxVochtEntity) ? vocht.toFixed(0)+'% · '+(vocht>80?'erg vochtig':vocht>60?'vochtig':vocht>40?'normaal':'droog') : '--');
+      T('wx-station', this._hasEntity(wxStationEntity) ? _st(wxStationEntity) : '--');
+      T('wx-cond', this._hasEntity(wxWeatherEntity) ? _st(wxWeatherEntity) : '--');
+      const gemeten = _at(wxTempEntity,'Measured');
+      T('wx-meting', gemeten !== '--' ? gemeten : '--');
+      const compassEl = container.querySelector('#wx-compass');
+      if (compassEl) compassEl.innerHTML = this._windCompassSVG(bearing, windBft, windKmh);
+      const vochtGaugeEl = container.querySelector('#wx-vochtgauge');
+      if (vochtGaugeEl) vochtGaugeEl.innerHTML = this._radialGauge(vocht, 100, '#66c4ff', vocht.toFixed(0)+'%');
+      const regenGaugeEl = container.querySelector('#wx-regengauge');
+      if (regenGaugeEl) regenGaugeEl.innerHTML = this._radialGauge(regenkans, 100, regenkans>60?'#ff6666':regenkans>30?'#ffaa44':'#66ccff', regenkans.toFixed(0)+'%');
+      const days = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
+      const tbl = container.querySelector('#wx-forecast-table');
+      if (tbl) {
+        let cells = '';
+        for (let d = 1; d <= 5; d++) {
+          const rk = _s(regenkansPrefix+'_'+d+'d'), zk = _s(zonkansPrefix+'_'+d+'d'), wk = _s(windkrachtPrefix+'_'+d+'d');
+          const fcDay = (this._forecast || [])[d-1];
+          const dagNaam = fcDay ? days[new Date(fcDay.datetime).getDay()] : ('+'+d+'d');
+          const icon = this._weatherIcon(fcDay ? fcDay.condition : '', 30);
+          const tMax = fcDay && fcDay.temperature !== undefined ? Math.round(fcDay.temperature) : '--';
+          const tMin = fcDay && fcDay.templow !== undefined ? Math.round(fcDay.templow) : '--';
+          cells += `<div class="sb-card" style="text-align:center;padding:10px 6px">
+            <div style="font-size:10px;color:rgba(255,255,255,0.5);letter-spacing:1px;margin-bottom:4px">${dagNaam}</div>
+            ${icon}
+            <div style="font-size:13px;font-weight:700;margin-top:4px">${tMax}° <span style="color:rgba(255,255,255,0.4);font-weight:400">${tMin}°</span></div>
+            <div style="font-size:10px;color:#ffd700;margin-top:4px">☀ ${zk.toFixed(0)}%</div>
+            <div style="font-size:10px;color:#66ccff">☔ ${rk.toFixed(0)}%</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.5)">💨 Bft ${wk.toFixed(0)}</div>
+          </div>`;
+        }
+        tbl.innerHTML = cells;
+      }
+    }
   }
 
 
@@ -1442,37 +1730,6 @@ class FinallySkyCard extends HTMLElement {
     return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="12" rx="7" ry="5" fill="#778"/></svg>`;
   }
 
-  _forecastTegel() {
-    const days = ['Zo','Ma','Di','Wo','Do','Vr','Za'];
-    const fc = this._forecast;
-    if (!fc || fc.length === 0) {
-      return `<div class="tb" style="min-width:380px;max-width:500px;justify-content:center;align-items:center">
-        <div class="lbl">WEERSVOORSPELLING</div>
-        <div style="font-size:13px;color:rgba(255,255,255,0.95);margin-top:8px">Laden...</div>
-      </div>`;
-    }
-    const items = fc.slice(0, 5).map(day => {
-      const d = new Date(day.datetime);
-      const dagNaam = days[d.getDay()];
-      const tMax = day.temperature !== undefined ? Math.round(day.temperature) : (day.tempmax !== undefined ? Math.round(day.tempmax) : '--');
-      const tMin = day.templow !== undefined ? Math.round(day.templow) : (day.temperature_low !== undefined ? Math.round(day.temperature_low) : '--');
-      const icon = this._weatherIcon(day.condition, 36);
-      const neerslag = day.precipitation !== undefined && day.precipitation > 0 ? `<div style="font-size:11px;color:#66aaff;margin-top:2px">${day.precipitation.toFixed(1)}mm</div>` : '';
-      return `<div style="display:flex;flex-direction:column;align-items:center;gap:3px;min-width:68px">
-        <div style="font-size:12px;color:rgba(255,255,255,0.95);letter-spacing:1px">${dagNaam}</div>
-        ${icon}
-        <div style="font-size:15px;font-weight:700;color:#fff">${tMax}°</div>
-        <div style="font-size:12px;color:rgba(255,255,255,0.95)">${tMin}°</div>
-        ${neerslag}
-      </div>`;
-    }).join('');
-    return `<div class="tb" style="min-width:380px;max-width:500px">
-      <div class="lbl" style="margin-bottom:10px">WEERSVOORSPELLING</div>
-      <div style="display:flex;flex-direction:row;justify-content:space-between;align-items:flex-start;gap:4px;width:100%">
-        ${items}
-      </div>
-    </div>`;
-  }
   _s(e) { try { return parseFloat(this._hass.states[e]?.state) || 0; } catch(x) { return 0; } }
   _hasEntity(e) { return !!(this._hass && this._hass.states && this._hass.states[e]); }
   _st(e) { try { return this._hass.states[e]?.state || '--'; } catch(x) { return '--'; } }
@@ -2051,7 +2308,13 @@ class FinallySkyCard extends HTMLElement {
       <div style="margin-top:4px">${this._progressBar(pvPct, 'linear-gradient(90deg,#ff8800,#ffd700)', 155)}</div>
       <div class="sub" style="margin-top:3px;font-size:13px">${pvVandaag} kWh · gisteren ${pvGisteren}</div>
     </div>
-    ${this._forecastTegel()}
+    <div class="tb" style="flex:1;min-width:220px;text-align:center;padding:14px 24px;justify-content:center">
+      <div style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Totaal SOC</div>
+      <div style="font-size:56px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${battSoc.toFixed(2)}%</div>
+      <div style="height:7px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-top:12px">
+        <div style="width:${battSoc}%;height:100%;background:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};border-radius:4px;transition:width 1s ease"></div>
+      </div>
+    </div>
   </div>
 
   <!-- GRID label linksboven bij mast -->
@@ -2098,8 +2361,8 @@ class FinallySkyCard extends HTMLElement {
     <div class="sb-btn" data-sid="accu"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#00d7ff" stroke-width="2" stroke-linecap="round"><rect x="6" y="7" width="12" height="14" rx="2"/><path d="M10 7V5h4v2"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg></span><span class="sb-lbl">Accu</span></div>
     <div class="sb-btn" data-sid="generator"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#aaaaff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></span><span class="sb-lbl">Gen.</span></div>
     <div class="sb-btn" data-sid="klimaat"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ff8844" stroke-width="2" stroke-linecap="round"><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></span><span class="sb-lbl">Klimaat</span></div>
-    <div class="sb-btn" data-sid="verlichting"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#ffe066" stroke-width="2" stroke-linecap="round"><path d="M9 21h6M12 3a6 6 0 0 1 6 6c0 2.22-1.21 4.16-3 5.2V18H9v-3.8A6.002 6.002 0 0 1 6 9a6 6 0 0 1 6-6z"/></svg></span><span class="sb-lbl">Licht</span></div>
     <div class="sb-btn" data-sid="systeem"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#88ccff" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></span><span class="sb-lbl">Systeem</span></div>
+    <div class="sb-btn" data-sid="weerstation"><span class="sb-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#88ccee" stroke-width="2" stroke-linecap="round"><path d="M17.5 19a4.5 4.5 0 0 0 0-9h-1.26a7 7 0 1 0-11.98 6.35"/><line x1="8" y1="19" x2="8" y2="21"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="16" y1="19" x2="16" y2="21"/></svg></span><span class="sb-lbl">Weer</span></div>
   </div>
 
   <!-- ZON OP label linksonder bij boog start -->
