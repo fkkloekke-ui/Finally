@@ -636,6 +636,7 @@ class FinallySkyCard extends HTMLElement {
     // Vul met actuele data
     this._fillPopupData(id, container);
     if (id === 'pv-historie' || id === 'load-historie') this._wirePowerHistory(id, panel, container);
+    if (id === 'accu-historie') this._wireSocHistory(panel, container);
     // Energie-popup: min/max spanning & SOC (dag/week/maand)
     if (id === 'energie') this._wireMinMaxStats(panel, container);
     if (id === 'weerstation') this._wireWeerstation(container);
@@ -901,6 +902,86 @@ class FinallySkyCard extends HTMLElement {
     }
   }
 
+  _wireSocHistory(panel, container) {
+    const btns = panel.querySelectorAll('[data-ah-period]');
+    if (!this._ahPeriod) this._ahPeriod = 'dag';
+    const setActive = () => btns.forEach(b => b.classList.toggle('active', b.dataset.ahPeriod === this._ahPeriod));
+    setActive();
+    btns.forEach(b => {
+      b.onclick = () => {
+        this._ahPeriod = b.dataset.ahPeriod;
+        setActive();
+        this._loadSocHistory(container, this._ahPeriod);
+      };
+    });
+    this._loadSocHistory(container, this._ahPeriod);
+  }
+
+  async _loadSocHistory(container, period) {
+    if (!this._hass) return;
+    const wrap = container.querySelector('#ah-chart-wrap');
+    if (!wrap) return;
+    wrap.innerHTML = '<div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:70px 0">Laden…</div>';
+    const socEntity = (this._config && this._config.smartshunt_soc_entity) || 'sensor.smartshunt_hq2224ru6gc_batterij';
+    const color = '#00d7ff';
+    const bucket = period === 'dag' ? 'hour' : 'day';
+    const hoursBack = period === 'dag' ? 24 : period === 'week' ? 24 * 7 : 24 * 30;
+    const end = new Date();
+    const start = new Date(end.getTime() - hoursBack * 3600 * 1000);
+    try {
+      const result = await this._hass.callWS({
+        type: 'recorder/statistics_during_period',
+        start_time: start.toISOString(),
+        end_time: end.toISOString(),
+        statistic_ids: [socEntity],
+        period: bucket,
+        types: ['mean', 'min', 'max'],
+      });
+      const rows = (result && result[socEntity]) || [];
+      if (!rows.length) {
+        wrap.innerHTML = '<div style="color:rgba(255,120,120,0.6);font-size:12px;text-align:center;padding:70px 0">Geen historische data gevonden voor deze periode</div>';
+        return;
+      }
+      const socMean = rows.map(r => Math.round(r.mean || 0));
+      const socMin = rows.map(r => Math.round(r.min ?? r.mean ?? 0));
+      const socMax = rows.map(r => Math.round(r.max ?? r.mean ?? 0));
+      const avgVal = socMean.reduce((a, b) => a + b, 0) / socMean.length;
+      const minVal = Math.min(...socMin);
+      const maxVal = Math.max(...socMax);
+      const labels = rows.map(r => {
+        const d = new Date(r.start);
+        return bucket === 'hour' ? d.getHours() + 'u' : (d.getDate() + '/' + (d.getMonth() + 1));
+      });
+      const liveState = this._hass.states[socEntity];
+      const liveVal = liveState ? (Math.round(parseFloat(liveState.state) * 10 || 0) / 10) + '%' : '--';
+      const subtitle = liveState ? this._relTime(new Date(liveState.last_updated)) : '';
+      const nowIndex = bucket === 'hour' ? rows.length - 1 : null;
+      const tooltips = labels.map((lbl, i) => {
+        const rangeLbl = bucket === 'hour' ? `${lbl} - ${(parseInt(lbl,10)+1)%24}:00` : lbl;
+        return { title: rangeLbl, rows: [
+          { color, label: 'Gemiddeld', value: socMean[i] + ' %', bold: true },
+          { color, label: 'Min/Max', value: `${socMin[i]}% - ${socMax[i]}%`, bold: false },
+        ] };
+      });
+      const chart = this._comboChartCard({
+        title: `Accu SOC — ${liveVal}, ${subtitle}`,
+        labels,
+        bars: { series: socMean, color, name: 'Accu SOC (gem.)', unit: '%' },
+        nowIndex,
+        tooltips,
+      });
+      wrap.innerHTML = chart.html;
+      chart.wire(wrap);
+      const T = (sel, val) => { const e = container.querySelector(sel); if (e) e.textContent = val; };
+      T('#ah-avg', Math.round(avgVal) + ' %');
+      T('#ah-min', minVal + ' %');
+      T('#ah-max', maxVal + ' %');
+    } catch (e) {
+      console.warn('Finally Card: accu SOC-geschiedenis laden mislukt', e);
+      wrap.innerHTML = '<div style="color:rgba(255,120,120,0.6);font-size:12px;text-align:center;padding:70px 0">Kon geschiedenis niet laden</div>';
+    }
+  }
+
   _relTime(date) {
     const diffSec = Math.max(0, Math.round((Date.now() - date.getTime()) / 1000));
     if (diffSec < 60) return 'zojuist bijgewerkt';
@@ -1055,6 +1136,7 @@ class FinallySkyCard extends HTMLElement {
       accu: `🔋 ACCUBANK${(this._config && this._config.hide_battery_label) ? '' : ` — ${(this._config && this._config.battery_bank_label) || '628Ah LiFePO4'}`}`, generator: '⚙️ GENERATOR',
       klimaat: '🌡️ KLIMAAT AAN BOORD', systeem: '🖥️ SYSTEEM',
       'pv-historie': '☀️ ZONNEPANELEN — GESCHIEDENIS', 'load-historie': '⚡ VERBRUIK — GESCHIEDENIS',
+      'accu-historie': '🔋 ACCU SOC — GESCHIEDENIS',
       weerstation: '⛅ WEERSTATION — BUIENRADAR'
     };
     const h = (s) => `<div class="sb-title"><span>${titles[id]||id}</span><span class="sb-close">✕</span></div>` + s;
@@ -1101,6 +1183,23 @@ class FinallySkyCard extends HTMLElement {
       <div id="wx-yield-chart" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;min-height:180px">
         <div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:60px 0">Laden…</div>
       </div>`);
+
+    if (id === 'accu-historie') {
+      return h(`
+      <div class="ph-periods" style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <div class="ph-period-btn" data-ah-period="dag">Dag</div>
+        <div class="ph-period-btn" data-ah-period="week">Week</div>
+        <div class="ph-period-btn" data-ah-period="maand">Maand</div>
+      </div>
+      <div id="ah-chart-wrap" style="background:rgba(255,255,255,0.03);border:0.5px solid rgba(255,255,255,0.08);border-radius:12px;padding:14px;min-height:200px">
+        <div style="color:rgba(255,255,255,0.3);font-size:12px;text-align:center;padding:70px 0">Laden…</div>
+      </div>
+      <div id="ah-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+        <div class="sb-mini"><div class="sb-mini-lbl">Gemiddeld</div><div class="sb-mini-val" id="ah-avg" style="color:#66c4ff">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Laagste</div><div class="sb-mini-val" id="ah-min" style="color:#66c4ff">--</div></div>
+        <div class="sb-mini"><div class="sb-mini-lbl">Hoogste</div><div class="sb-mini-val" id="ah-max" style="color:#66c4ff">--</div></div>
+      </div>`);
+    }
 
     if (id === 'pv-historie' || id === 'load-historie') {
       const isLoad = id === 'load-historie';
@@ -2308,9 +2407,16 @@ class FinallySkyCard extends HTMLElement {
       <div style="margin-top:4px">${this._progressBar(pvPct, 'linear-gradient(90deg,#ff8800,#ffd700)', 155)}</div>
       <div class="sub" style="margin-top:3px;font-size:13px">${pvVandaag} kWh · gisteren ${pvGisteren}</div>
     </div>
-    <div class="tb" style="flex:0.5;min-width:110px;text-align:center;padding:14px 12px;justify-content:center">
+    <div class="tb" data-sid="accu-historie" style="flex:0.5;min-width:110px;text-align:center;padding:14px 12px;justify-content:center;cursor:pointer">
       <div style="font-size:11px;color:rgba(255,255,255,0.35);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Totaal SOC</div>
-      <div style="font-size:56px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${battSoc.toFixed(2)}%</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px">
+        <svg width="22" height="41" viewBox="0 0 26 48" fill="none">
+          <rect x="9" y="1" width="8" height="4" rx="1.5" fill="rgba(255,255,255,0.55)"/>
+          <rect x="1" y="5" width="24" height="42" rx="4" stroke="rgba(255,255,255,0.55)" stroke-width="2.5"/>
+          <rect x="5" y="${42 - Math.max(4, 34 * (battSoc/100))}" width="16" height="${Math.max(4, 34 * (battSoc/100))}" rx="2" fill="${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'}"/>
+        </svg>
+        <div style="font-size:44px;font-weight:800;color:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};line-height:1">${battSoc.toFixed(2)}%</div>
+      </div>
       <div style="height:7px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;margin-top:12px">
         <div style="width:${battSoc}%;height:100%;background:${battSoc>35?'#00cc66':battSoc>30?'#ffa500':'#ff4444'};border-radius:4px;transition:width 1s ease"></div>
       </div>
@@ -2918,6 +3024,16 @@ ${(this._config && this._config.dc_load_entity) ? `
     if (pwrbars && !pwrbars._wired) {
       pwrbars._wired = true;
       pwrbars.addEventListener('click', (e) => {
+        const btn = e.target.closest('[data-sid]');
+        if (btn) this._openSidebar(btn.dataset.sid);
+      });
+    }
+
+    // Topbalk — klik op de SOC-tegel opent de accu-geschiedenis-popup
+    const topbar = this.shadowRoot.querySelector('.topbar');
+    if (topbar && !topbar._wired) {
+      topbar._wired = true;
+      topbar.addEventListener('click', (e) => {
         const btn = e.target.closest('[data-sid]');
         if (btn) this._openSidebar(btn.dataset.sid);
       });
