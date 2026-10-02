@@ -863,6 +863,8 @@ class FinallySkyCard extends HTMLElement {
         const d = new Date(r.start);
         return bucket === 'hour' ? d.getHours() + 'u' : (d.getDate() + '/' + (d.getMonth() + 1));
       });
+      const peakSeries = rows.map(r => Math.round(r.max || r.mean || 0));
+      const showPeak = id === 'load-historie';
       const socMean = rows.map((r, i) => socRows[i] ? Math.round(socRows[i].mean) : null);
       const socMin = rows.map((r, i) => socRows[i] ? Math.round(socRows[i].min) : null);
       const socMax = rows.map((r, i) => socRows[i] ? Math.round(socRows[i].max) : null);
@@ -876,6 +878,9 @@ class FinallySkyCard extends HTMLElement {
         const rowsT = [
           { color, label: id === 'load-historie' ? 'Verbruik' : 'Zon', value: kwhSeries[i].toFixed(2) + ' kWh', bold: false }
         ];
+        if (showPeak) {
+          rowsT.push({ color: '#ff4466', label: 'Piekvermogen', value: peakSeries[i] + ' W', bold: true });
+        }
         if (hasSoc) {
           rowsT.push({ color: '#66c4ff', label: 'Accu gemiddeld', value: socMean[i] + ' %', bold: true });
           rowsT.push({ color: '#66c4ff', label: 'Accu min/max', value: `${socMin[i]}% - ${socMax[i]}%`, bold: false });
@@ -887,6 +892,7 @@ class FinallySkyCard extends HTMLElement {
         labels,
         bars: { series: kwhSeries, color, name: id === 'load-historie' ? 'Verbruik' : 'Zon', unit: 'kWh' },
         line: hasSoc ? { series: socMean, minSeries: socMin, maxSeries: socMax, color: '#66c4ff', name: 'Accu SOC', unit: '%' } : null,
+        line2: showPeak ? { series: peakSeries, color: '#ff4466', name: 'Piekvermogen', unit: 'W' } : null,
         nowIndex,
         tooltips,
       });
@@ -1011,7 +1017,7 @@ class FinallySkyCard extends HTMLElement {
   // per tijdvak. Retourneert {html, wire(container)} — wire() moet ná het invoegen van html
   // aangeroepen worden om de tooltip-interactie te koppelen.
   _comboChartCard(opts) {
-    const H = opts.height || 260, W = 900, padL = 44, padR = opts.line ? 44 : 16, padT = 16, padB = 30;
+    const H = opts.height || 260, W = 900, padL = 44, padR = opts.line2 ? 92 : (opts.line ? 44 : 16), padT = 16, padB = 30;
     const plotW = W - padL - padR, plotH = H - padT - padB;
     const labels = opts.labels;
     const n = labels.length;
@@ -1059,6 +1065,19 @@ class FinallySkyCard extends HTMLElement {
         lineHtml += `<text x="${(W-padR+8).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="start" font-size="10" fill="${opts.line.color}" opacity="0.6">${Math.round(val)}${opts.line.unit||''}</text>`;
       }
     }
+    if (opts.line2) {
+      const p2 = opts.line2.series.map(v => (typeof v === 'number' && isFinite(v)) ? v : 0);
+      const l2Max = Math.max(...p2, 0.0001) * 1.1;
+      const yLine2 = v => padT + plotH - (v / l2Max) * plotH;
+      const pts2 = p2.map((v, i) => ({ x: xCenter(i), y: yLine2(v) }));
+      lineHtml += `<path d="${this._smoothPath(pts2)}" fill="none" stroke="${opts.line2.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 4" opacity="0.95"/>`;
+      pts2.forEach(p => { lineHtml += `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="2.5" fill="${opts.line2.color}"/>`; });
+      for (let g = 0; g <= 3; g++) {
+        const y = padT + plotH - (g/3) * plotH;
+        const val = (g/3) * l2Max;
+        lineHtml += `<text x="${(W-6).toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="end" font-size="10" fill="${opts.line2.color}" opacity="0.6">${Math.round(val)}${opts.line2.unit||''}</text>`;
+      }
+    }
     let grid = '';
     for (let g = 0; g <= 3; g++) {
       const y = padT + plotH - (g/3) * plotH;
@@ -1080,6 +1099,7 @@ class FinallySkyCard extends HTMLElement {
     const legendItems = [];
     legendItems.push({ color: bars.color, name: bars.name, hatched: bars.hatchedFrom !== undefined && bars.hatchedFrom !== null });
     if (opts.line) legendItems.push({ color: opts.line.color, name: opts.line.name, hatched: false });
+    if (opts.line2) legendItems.push({ color: opts.line2.color, name: opts.line2.name, hatched: false });
     const legend = `<div style="display:flex;gap:16px;margin-top:10px;font-size:11px;color:rgba(255,255,255,0.5);flex-wrap:wrap">
       ${legendItems.map(l => `<span><span style="display:inline-block;width:10px;height:10px;background:${l.color};border-radius:2px;margin-right:5px;${l.hatched?'opacity:0.6':''}"></span>${l.name}${l.hatched?' (voorspelling)':''}</span>`).join('')}
     </div>`;
